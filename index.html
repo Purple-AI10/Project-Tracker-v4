@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Tracker - Senior Developer Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script>
+    // Your Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDPg5IHycMiGZUhwkb50LIPriSWoAZj4ng",
+        authDomain: "project-tracker-aa616.firebaseapp.com",
+        databaseURL: "https://project-tracker-aa616-default-rtdb.firebaseio.com",
+        projectId: "project-tracker-aa616",
+        storageBucket: "project-tracker-aa616.appspot.com", // Corrected typo
+        messagingSenderId: "177135358125",
+        appId: "1:177135358125:web:4f2c6f6105c9a4361ef624",
+        measurementId: "G-6PG07GTV45"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>Mikro Project Tracker</h1>
+                <button id="adminLoginBtn" class="btn admin-login-btn" onclick="showAdminLogin()">Admin Login</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number total" id="totalProjects">0</div>
+                <div class="stat-label">Total Projects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number active" id="activeProjects">0</div>
+                <div class="stat-label">Active Projects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number completed" id="completedProjects">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number overdue" id="overdueProjects">0</div>
+                <div class="stat-label">Overdue</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="controls-row">
+                <div id="adminOnlyControls" style="display: none;">
+                    <button class="btn" onclick="openModal()">+ Add New Project</button>
+                </div>
+                <select id="filterProjectType" onchange="filterProjects()">
+                    <option value="">All Project Types</option>
+                    <option value="p-new">P-New</option>
+                    <option value="p-repeat">P-Repeat</option>
+                    <option value="s">S</option>
+                    <option value="e">E</option>
+                </select>
+                <select id="filterStatus" onchange="filterProjects()">
+                    <option value="">All Status</option>
+                    <option value="yet-to-start">Yet to start</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="on-hold">On hold</option>
+                </select>
+                <select id="filterPriority" onchange="filterProjects()">
+                    <option value="">All Project Stages</option>
+                    <option value="design">Design</option>
+                    <option value="production">Production</option>
+                    <option value="controls">Controls</option>
+                    <option value="ready-for-dispatch">Ready for dispatch</option>
+                    <option value="installation-and-commissioning">Installation and commissioning</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="Search projects..." onkeyup="filterProjects()">
+                <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
+            </div>
+        </div>
+
+        <div class="project-grid" id="projectGrid">
+            <!-- Projects will be dynamically added here -->
+        </div>
+    </div>
+
+    <!-- Modal for adding/editing projects -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Add New Project</h2>
+            <form id="projectForm">
+                <div class="form-group">
+                    <label for="projectName">Project Name</label>
+                    <input type="text" id="projectName" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectDescription">Description</label>
+                    <textarea id="projectDescription" placeholder="Brief description of the project" class="description-small"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="projectType">Project Type</label>
+                    <select id="projectType" required>
+                        <option value="p-new">P-New</option>
+                        <option value="p-repeat">P-Repeat</option>
+                        <option value="s">S</option>
+                        <option value="e">E</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="projectBU">BU</label>
+                    <select id="projectBU" required>
+                        <option value="ev">EV</option>
+                        <option value="lasers">Lasers</option>
+                        <option value="global">Global</option>
+                        <option value="ezcam">EzCam</option>
+                        <option value="leak-tester">Leak Tester</option>
+                        <option value="service">Service</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="projectStatus">Status</label>
+                    <select id="projectStatus" required>
+                        <option value="yet-to-start">Yet to start</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="on-hold">On hold</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="projectPriority">Project Stage</label>
+                    <select id="projectPriority" required>
+                        <option value="design">Design</option>
+                        <option value="production">Production</option>
+                        <option value="controls">Controls</option>
+                        <option value="ready-for-dispatch">Ready for dispatch</option>
+                        <option value="installation-and-commissioning">Installation and commissioning</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="projectDeadline">Deadline</label>
+                    <input type="date" id="projectDeadline">
+                </div>
+                <div class="form-group">
+                    <label for="projectAssignee">Project Manager</label>
+                    <input type="text" id="projectAssignee" placeholder="Project manager name">
+                </div>
+                <div class="form-group">
+                    <label for="projectProgress">Progress (%)</label>
+                    <input type="number" id="projectProgress" min="0" max="100" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="projectRemarks">Remarks</label>
+                    <textarea id="projectRemarks" placeholder="Additional remarks or notes"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn">Save Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content admin-modal">
+            <h2>Admin Login</h2>
+            <form id="adminForm">
+                <div class="form-group">
+                    <label for="adminPassword">Password</label>
+                    <input type="password" id="adminPassword" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAdminModal()">Cancel</button>
+                    <button type="submit" class="btn">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
