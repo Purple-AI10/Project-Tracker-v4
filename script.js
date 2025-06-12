@@ -102,18 +102,20 @@ function getFilteredProjects() {
     const statusFilter = document.getElementById('filterStatus').value;
     const priorityFilter = document.getElementById('filterPriority').value;
     const projectTypeFilter = document.getElementById('filterProjectType').value;
+    const buFilter = document.getElementById('filterBU').value;
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
     return projects.filter(project => {
         const matchesStatus = !statusFilter || project.status === statusFilter;
         const matchesPriority = !priorityFilter || project.priority === priorityFilter;
         const matchesProjectType = !projectTypeFilter || project.projectType === projectTypeFilter;
+        const matchesBU = !buFilter || project.bu === buFilter;
         const matchesSearch = !searchTerm ||
             project.name.toLowerCase().includes(searchTerm) ||
             project.description.toLowerCase().includes(searchTerm) ||
             project.assignee.toLowerCase().includes(searchTerm);
 
-        return matchesStatus && matchesPriority && matchesProjectType && matchesSearch;
+        return matchesStatus && matchesPriority && matchesProjectType && matchesBU && matchesSearch;
     });
 }
 
@@ -131,6 +133,21 @@ function updateStats() {
     document.getElementById('overdueProjects').textContent = overdue;
 }
 
+function calculateProgress(status, priority) {
+    if (status === 'completed') return 100;
+    if (status === 'yet-to-start') return 0;
+    
+    // For active or on-hold status, calculate based on project stage
+    switch (priority) {
+        case 'design': return 5;
+        case 'production': return 20;
+        case 'controls': return 40;
+        case 'ready-for-dispatch': return 60;
+        case 'installation-and-commissioning': return 80;
+        default: return 0;
+    }
+}
+
 function openModal(project = null) {
     const modal = document.getElementById('projectModal');
     const title = document.getElementById('modalTitle');
@@ -146,14 +163,16 @@ function openModal(project = null) {
         document.getElementById('projectPriority').value = project.priority;
         document.getElementById('projectDeadline').value = project.deadline;
         document.getElementById('projectAssignee').value = project.assignee;
-        document.getElementById('projectProgress').value = project.progress;
         document.getElementById('projectRemarks').value = project.remarks || '';
-        document.getElementById('projectType').value = project.projectType || 'p-new';
-        document.getElementById('projectBU').value = project.bu || 'ev';
+        document.getElementById('projectType').value = project.projectType || '';
+        document.getElementById('projectBU').value = project.bu || '';
     } else {
         title.textContent = 'Add New Project';
         editingId = null;
         form.reset();
+        // Reset select fields to show placeholder options
+        document.getElementById('projectType').value = '';
+        document.getElementById('projectBU').value = '';
     }
 
     modal.style.display = 'flex';
@@ -230,14 +249,18 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('projectForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
+        const status = document.getElementById('projectStatus').value;
+        const priority = document.getElementById('projectPriority').value;
+        const progress = calculateProgress(status, priority);
+
         const formData = {
             name: document.getElementById('projectName').value,
             description: document.getElementById('projectDescription').value,
-            status: document.getElementById('projectStatus').value,
-            priority: document.getElementById('projectPriority').value,
+            status: status,
+            priority: priority,
             deadline: document.getElementById('projectDeadline').value,
             assignee: document.getElementById('projectAssignee').value,
-            progress: parseInt(document.getElementById('projectProgress').value),
+            progress: progress,
             remarks: document.getElementById('projectRemarks').value || '',
             projectType: document.getElementById('projectType').value,
             bu: document.getElementById('projectBU').value

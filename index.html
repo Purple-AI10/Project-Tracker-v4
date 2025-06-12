@@ -65,6 +65,16 @@
                     <option value="s">S</option>
                     <option value="e">E</option>
                 </select>
+                <select id="filterBU" onchange="filterProjects()">
+                    <option value="">All BUs</option>
+                    <option value="ev">EV</option>
+                    <option value="lasers">Lasers</option>
+                    <option value="global">Global</option>
+                    <option value="ezcam">EzCam</option>
+                    <option value="leak-tester">Leak Tester</option>
+                    <option value="service">Service</option>
+                    <option value="all">All</option>
+                </select>
                 <select id="filterStatus" onchange="filterProjects()">
                     <option value="">All Status</option>
                     <option value="yet-to-start">Yet to start</option>
@@ -96,16 +106,17 @@
             <h2 id="modalTitle">Add New Project</h2>
             <form id="projectForm">
                 <div class="form-group">
-                    <label for="projectName">Project Name</label>
+                    <label for="projectName">Project Name *</label>
                     <input type="text" id="projectName" required>
                 </div>
                 <div class="form-group">
-                    <label for="projectDescription">Description</label>
-                    <textarea id="projectDescription" placeholder="Brief description of the project" class="description-small"></textarea>
+                    <label for="projectDescription">Description *</label>
+                    <textarea id="projectDescription" placeholder="Brief description of the project" class="description-small" required></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="projectType">Project Type</label>
+                    <label for="projectType">Project Type *</label>
                     <select id="projectType" required>
+                        <option value="">Select Project Type</option>
                         <option value="p-new">P-New</option>
                         <option value="p-repeat">P-Repeat</option>
                         <option value="s">S</option>
@@ -113,14 +124,16 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="projectBU">BU</label>
+                    <label for="projectBU">BU *</label>
                     <select id="projectBU" required>
+                        <option value="">Select BU</option>
                         <option value="ev">EV</option>
                         <option value="lasers">Lasers</option>
                         <option value="global">Global</option>
                         <option value="ezcam">EzCam</option>
                         <option value="leak-tester">Leak Tester</option>
                         <option value="service">Service</option>
+                        <option value="all">All</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -143,16 +156,12 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="projectDeadline">Deadline</label>
-                    <input type="date" id="projectDeadline">
+                    <label for="projectDeadline">Deadline *</label>
+                    <input type="date" id="projectDeadline" required>
                 </div>
                 <div class="form-group">
-                    <label for="projectAssignee">Project Manager</label>
-                    <input type="text" id="projectAssignee" placeholder="Project manager name">
-                </div>
-                <div class="form-group">
-                    <label for="projectProgress">Progress (%)</label>
-                    <input type="number" id="projectProgress" min="0" max="100" value="0">
+                    <label for="projectAssignee">Project Manager *</label>
+                    <input type="text" id="projectAssignee" placeholder="Project manager name" required>
                 </div>
                 <div class="form-group">
                     <label for="projectRemarks">Remarks</label>
