@@ -7,9 +7,9 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #1a2332 0%, #0f1419 100%);
     min-height: 100vh;
-    color: #333;
+    color: #e2e8f0;
 }
 
 .container {
@@ -19,13 +19,13 @@ body {
 }
 
 .header {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 30px;
     margin-bottom: 30px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
 .header-content {
@@ -34,9 +34,25 @@ body {
     align-items: center;
 }
 
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo {
+    height: 40px;
+    width: auto;
+}
+
+.controls-row select {
+    min-width: 140px;
+    max-width: 160px;
+}
+
 .header h1 {
     font-size: 2.5rem;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin: 0;
@@ -61,13 +77,13 @@ body {
 }
 
 .stat-card {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 15px;
     padding: 25px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(100, 116, 139, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -95,13 +111,13 @@ body {
 .overdue { color: #ef4444; }
 
 .controls {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 15px;
     padding: 25px;
     margin-bottom: 30px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
 .controls-row {
@@ -117,7 +133,7 @@ body {
 }
 
 .btn {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -130,7 +146,7 @@ body {
 
 .btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
 }
 
 .btn-secondary {
@@ -143,17 +159,18 @@ body {
 
 input, select {
     padding: 12px 16px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid #475569;
     border-radius: 10px;
     font-size: 0.9rem;
     transition: border-color 0.3s ease;
-    background: white;
+    background: #1e293b;
+    color: #e2e8f0;
 }
 
 input:focus, select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .project-grid {
@@ -163,12 +180,12 @@ input:focus, select:focus {
 }
 
 .project-card {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 25px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(100, 116, 139, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -189,12 +206,12 @@ input:focus, select:focus {
 .project-title {
     font-size: 1.3rem;
     font-weight: 700;
-    color: #1f2937;
+    color: #f1f5f9;
     margin-bottom: 5px;
 }
 
 .project-description {
-    color: #6b7280;
+    color: #cbd5e1;
     font-size: 0.9rem;
     margin-bottom: 20px;
     line-height: 1.5;
@@ -289,19 +306,20 @@ input:focus, select:focus {
 }
 
 .modal-content {
-    background: white;
+    background: #1e293b;
     border-radius: 20px;
     padding: 30px;
     max-width: 500px;
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
 .modal h2 {
     margin-bottom: 20px;
-    color: #1f2937;
+    color: #f1f5f9;
 }
 
 .form-group {
@@ -312,7 +330,7 @@ input:focus, select:focus {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
-    color: #374151;
+    color: #f1f5f9;
 }
 
 .form-group input,

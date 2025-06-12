@@ -14,6 +14,10 @@ def styles():
 def script():
     return send_from_directory('.', 'script.js')
 
+@app.route('/mikro-logo.svg')
+def logo():
+    return send_from_directory('.', 'mikro-logo.svg')
+
 
 if __name__ == '__main__':
     print("Starting Project Tracker server...")
