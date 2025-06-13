@@ -127,7 +127,7 @@ function calculateProgress(status, priority) {
         case 'controls': return 40;
         case 'ready-for-dispatch': return 60;
         case 'installation-and-commissioning': return 80;
-        default: return 0;
+        default: return 10; // Default progress for active projects
     }
 }
 function openModal(project = null) {
@@ -140,12 +140,25 @@ function openModal(project = null) {
         document.getElementById('projectName').value = project.name;
         document.getElementById('projectDescription').value = project.description;
         document.getElementById('projectStatus').value = project.status;
-        document.getElementById('projectPriority').value = project.priority;
         document.getElementById('projectDeadline').value = project.deadline;
         document.getElementById('projectAssignee').value = project.assignee;
         document.getElementById('projectRemarks').value = project.remarks || '';
         document.getElementById('projectType').value = project.projectType || '';
         document.getElementById('projectBU').value = project.bu || '';
+        
+        // Populate stage fields if they exist
+        if (project.stages) {
+            document.getElementById('designPerson').value = project.stages.design?.person || '';
+            document.getElementById('designTime').value = project.stages.design?.duration || '';
+            document.getElementById('productionPerson').value = project.stages.production?.person || '';
+            document.getElementById('productionTime').value = project.stages.production?.duration || '';
+            document.getElementById('controlsPerson').value = project.stages.controls?.person || '';
+            document.getElementById('controlsTime').value = project.stages.controls?.duration || '';
+            document.getElementById('dispatchPerson').value = project.stages.dispatch?.person || '';
+            document.getElementById('dispatchTime').value = project.stages.dispatch?.duration || '';
+            document.getElementById('installationPerson').value = project.stages.installation?.person || '';
+            document.getElementById('installationTime').value = project.stages.installation?.duration || '';
+        }
     }
     else {
         title.textContent = 'Add New Project';
@@ -154,6 +167,18 @@ function openModal(project = null) {
         // Reset select fields to show placeholder options
         document.getElementById('projectType').value = '';
         document.getElementById('projectBU').value = '';
+        
+        // Reset stage fields
+        document.getElementById('designPerson').value = '';
+        document.getElementById('designTime').value = '';
+        document.getElementById('productionPerson').value = '';
+        document.getElementById('productionTime').value = '';
+        document.getElementById('controlsPerson').value = '';
+        document.getElementById('controlsTime').value = '';
+        document.getElementById('dispatchPerson').value = '';
+        document.getElementById('dispatchTime').value = '';
+        document.getElementById('installationPerson').value = '';
+        document.getElementById('installationTime').value = '';
     }
     modal.style.display = 'flex';
 }
@@ -307,13 +332,35 @@ document.addEventListener('DOMContentLoaded', function () {
             name: document.getElementById('projectName').value,
             description: document.getElementById('projectDescription').value,
             status: status,
-            priority: priority,
+            priority: 'design', // Default to design since we removed the dropdown
             deadline: document.getElementById('projectDeadline').value,
             assignee: document.getElementById('projectAssignee').value,
             progress: progress,
             remarks: document.getElementById('projectRemarks').value || '',
             projectType: document.getElementById('projectType').value,
-            bu: document.getElementById('projectBU').value
+            bu: document.getElementById('projectBU').value,
+            stages: {
+                design: {
+                    person: document.getElementById('designPerson').value || '',
+                    duration: parseInt(document.getElementById('designTime').value) || 0
+                },
+                production: {
+                    person: document.getElementById('productionPerson').value || '',
+                    duration: parseInt(document.getElementById('productionTime').value) || 0
+                },
+                controls: {
+                    person: document.getElementById('controlsPerson').value || '',
+                    duration: parseInt(document.getElementById('controlsTime').value) || 0
+                },
+                dispatch: {
+                    person: document.getElementById('dispatchPerson').value || '',
+                    duration: parseInt(document.getElementById('dispatchTime').value) || 0
+                },
+                installation: {
+                    person: document.getElementById('installationPerson').value || '',
+                    duration: parseInt(document.getElementById('installationTime').value) || 0
+                }
+            }
         };
         let project;
         if (editingId) {

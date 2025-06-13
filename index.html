@@ -143,6 +143,14 @@
                     <textarea id="projectDescription" placeholder="Brief description of the project" class="description-small" required></textarea>
                 </div>
                 <div class="form-group">
+                    <label for="projectAssignee">Project Manager *</label>
+                    <input type="text" id="projectAssignee" placeholder="Project manager name" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectDeadline">Project Deadline *</label>
+                    <input type="date" id="projectDeadline" required>
+                </div>
+                <div class="form-group">
                     <label for="projectType">Project Type *</label>
                     <select id="projectType" required>
                         <option value="">Select Project Type</option>
@@ -174,23 +182,69 @@
                         <option value="on-hold">On hold</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label for="projectPriority">Project Stage</label>
-                    <select id="projectPriority" required>
-                        <option value="design">Design</option>
-                        <option value="production">Production</option>
-                        <option value="controls">Controls</option>
-                        <option value="ready-for-dispatch">Ready for dispatch</option>
-                        <option value="installation-and-commissioning">I&C</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="projectDeadline">Deadline *</label>
-                    <input type="date" id="projectDeadline" required>
-                </div>
-                <div class="form-group">
-                    <label for="projectAssignee">Project Manager *</label>
-                    <input type="text" id="projectAssignee" placeholder="Project manager name" required>
+                
+                <div class="stages-container">
+                    <div class="stages-title">Project Stages Timeline</div>
+                    
+                    <div class="stage-item">
+                        <div class="stage-label">1. Design</div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Person in Charge</label>
+                            <input type="text" id="designPerson" class="stage-input" placeholder="Enter name">
+                        </div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Time Duration (days)</label>
+                            <input type="number" id="designTime" class="stage-input" placeholder="Days" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="stage-item">
+                        <div class="stage-label">2. Production</div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Person in Charge</label>
+                            <input type="text" id="productionPerson" class="stage-input" placeholder="Enter name">
+                        </div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Time Duration (days)</label>
+                            <input type="number" id="productionTime" class="stage-input" placeholder="Days" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="stage-item">
+                        <div class="stage-label">3. Controls</div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Person in Charge</label>
+                            <input type="text" id="controlsPerson" class="stage-input" placeholder="Enter name">
+                        </div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Time Duration (days)</label>
+                            <input type="number" id="controlsTime" class="stage-input" placeholder="Days" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="stage-item">
+                        <div class="stage-label">4. Ready for Dispatch</div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Person in Charge</label>
+                            <input type="text" id="dispatchPerson" class="stage-input" placeholder="Enter name">
+                        </div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Time Duration (days)</label>
+                            <input type="number" id="dispatchTime" class="stage-input" placeholder="Days" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="stage-item">
+                        <div class="stage-label">5. Installation & Commissioning</div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Person in Charge</label>
+                            <input type="text" id="installationPerson" class="stage-input" placeholder="Enter name">
+                        </div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Time Duration (days)</label>
+                            <input type="number" id="installationTime" class="stage-input" placeholder="Days" min="0">
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="projectRemarks">Remarks</label>
