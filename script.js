@@ -367,6 +367,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('sidebar-collapsed');
+}
+
 // Make functions available globally for onclick handlers
 window.openModal = openModal;
 window.closeModal = closeModal;
@@ -377,3 +385,4 @@ window.exportData = exportData;
 window.showAdminLogin = showAdminLogin;
 window.closeAdminModal = closeAdminModal;
 window.logoutAdmin = logoutAdmin;
+window.toggleSidebar = toggleSidebar;

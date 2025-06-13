@@ -27,10 +27,9 @@
 </head>
 <body>
     <div class="layout-container">
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar"></div>
             <div class="sidebar-header">
                 <img src="mikro-logo.svg" alt="Mikro Logo" class="sidebar-logo">
-                <h2 class="sidebar-title">Project Tracker</h2>
             </div>
             
             <div class="sidebar-filters">
@@ -98,6 +97,10 @@
 
         <div class="main-content">
             <div class="header">
+                <div class="header-left">
+                    <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+                    <h1 class="header-title">Project Tracker</h1>
+                </div>
                 <button id="adminLoginBtn" class="btn admin-login-btn" onclick="showAdminLogin()">Admin Login</button>
             </div>
 
