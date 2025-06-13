@@ -20,7 +20,7 @@ body {
 
 .sidebar {
     width: 280px;
-    background: #ffffff;
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb, #90caf9);
     border-right: 2px solid #e9ecef;
     display: flex;
     flex-direction: column;
