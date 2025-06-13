@@ -80,10 +80,13 @@ function createProjectCard(project) {
             <div class="progress-fill" style="width: ${project.progress}%"></div>
         </div>
         ${project.remarks ? `<div class="project-remarks"><strong>Remarks:</strong> ${project.remarks}</div>` : ''}
-        ${isAdminMode ? `<div class="project-actions">
-            <button class="btn btn-small btn-secondary" onclick="editProject(${project.id})">Edit</button>
-            <button class="btn btn-small btn-danger" onclick="deleteProject(${project.id})">Delete</button>
-        </div>` : ''}
+        <div class="project-actions">
+            <button class="btn btn-small btn-info" onclick="showTimeline(${project.id})">📅 Timeline</button>
+            ${isAdminMode ? `
+                <button class="btn btn-small btn-secondary" onclick="editProject(${project.id})">Edit</button>
+                <button class="btn btn-small btn-danger" onclick="deleteProject(${project.id})">Delete</button>
+            ` : ''}
+        </div>
     `;
     return card;
 }
@@ -149,15 +152,15 @@ function openModal(project = null) {
         // Populate stage fields if they exist
         if (project.stages) {
             document.getElementById('designPerson').value = project.stages.design?.person || '';
-            document.getElementById('designTime').value = project.stages.design?.duration || '';
+            document.getElementById('designTime').value = project.stages.design?.endDate || '';
             document.getElementById('productionPerson').value = project.stages.production?.person || '';
-            document.getElementById('productionTime').value = project.stages.production?.duration || '';
+            document.getElementById('productionTime').value = project.stages.production?.endDate || '';
             document.getElementById('controlsPerson').value = project.stages.controls?.person || '';
-            document.getElementById('controlsTime').value = project.stages.controls?.duration || '';
+            document.getElementById('controlsTime').value = project.stages.controls?.endDate || '';
             document.getElementById('dispatchPerson').value = project.stages.dispatch?.person || '';
-            document.getElementById('dispatchTime').value = project.stages.dispatch?.duration || '';
+            document.getElementById('dispatchTime').value = project.stages.dispatch?.endDate || '';
             document.getElementById('installationPerson').value = project.stages.installation?.person || '';
-            document.getElementById('installationTime').value = project.stages.installation?.duration || '';
+            document.getElementById('installationTime').value = project.stages.installation?.endDate || '';
         }
     }
     else {
@@ -326,13 +329,12 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const status = document.getElementById('projectStatus').value;
-        const priority = document.getElementById('projectPriority').value;
-        const progress = calculateProgress(status, priority);
+        const progress = calculateProgress(status, 'design'); // Default stage calculation
         const formData = {
             name: document.getElementById('projectName').value,
             description: document.getElementById('projectDescription').value,
             status: status,
-            priority: 'design', // Default to design since we removed the dropdown
+            priority: 'design', // Default to design stage
             deadline: document.getElementById('projectDeadline').value,
             assignee: document.getElementById('projectAssignee').value,
             progress: progress,
@@ -342,23 +344,23 @@ document.addEventListener('DOMContentLoaded', function () {
             stages: {
                 design: {
                     person: document.getElementById('designPerson').value || '',
-                    duration: parseInt(document.getElementById('designTime').value) || 0
+                    endDate: document.getElementById('designTime').value || ''
                 },
                 production: {
                     person: document.getElementById('productionPerson').value || '',
-                    duration: parseInt(document.getElementById('productionTime').value) || 0
+                    endDate: document.getElementById('productionTime').value || ''
                 },
                 controls: {
                     person: document.getElementById('controlsPerson').value || '',
-                    duration: parseInt(document.getElementById('controlsTime').value) || 0
+                    endDate: document.getElementById('controlsTime').value || ''
                 },
                 dispatch: {
                     person: document.getElementById('dispatchPerson').value || '',
-                    duration: parseInt(document.getElementById('dispatchTime').value) || 0
+                    endDate: document.getElementById('dispatchTime').value || ''
                 },
                 installation: {
                     person: document.getElementById('installationPerson').value || '',
-                    duration: parseInt(document.getElementById('installationTime').value) || 0
+                    endDate: document.getElementById('installationTime').value || ''
                 }
             }
         };
@@ -429,8 +431,104 @@ function toggleSidebar() {
     mainContent.classList.toggle('sidebar-collapsed');
 }
 
-function showTimeline() {
-    document.getElementById('timelineModal').style.display = 'flex';
+function showTimeline(projectId = null) {
+    const modal = document.getElementById('timelineModal');
+    const content = document.getElementById('timelineContent');
+    
+    if (projectId) {
+        const project = projects.find(p => p.id == projectId);
+        if (project && project.stages) {
+            content.innerHTML = `
+                <div class="project-timeline-header">
+                    <h3>${project.name} - Timeline</h3>
+                </div>
+                <div class="timeline-stages">
+                    <div class="timeline-stage">
+                        <div class="stage-number">1</div>
+                        <div class="stage-info">
+                            <h3>Design</h3>
+                            <p>Person: ${project.stages.design?.person || 'Not assigned'}</p>
+                            <p>End Date: ${project.stages.design?.endDate ? formatDate(project.stages.design.endDate) : 'Not set'}</p>
+                        </div>
+                    </div>
+                    <div class="timeline-stage">
+                        <div class="stage-number">2</div>
+                        <div class="stage-info">
+                            <h3>Production</h3>
+                            <p>Person: ${project.stages.production?.person || 'Not assigned'}</p>
+                            <p>End Date: ${project.stages.production?.endDate ? formatDate(project.stages.production.endDate) : 'Not set'}</p>
+                        </div>
+                    </div>
+                    <div class="timeline-stage">
+                        <div class="stage-number">3</div>
+                        <div class="stage-info">
+                            <h3>Controls</h3>
+                            <p>Person: ${project.stages.controls?.person || 'Not assigned'}</p>
+                            <p>End Date: ${project.stages.controls?.endDate ? formatDate(project.stages.controls.endDate) : 'Not set'}</p>
+                        </div>
+                    </div>
+                    <div class="timeline-stage">
+                        <div class="stage-number">4</div>
+                        <div class="stage-info">
+                            <h3>Ready for Dispatch</h3>
+                            <p>Person: ${project.stages.dispatch?.person || 'Not assigned'}</p>
+                            <p>End Date: ${project.stages.dispatch?.endDate ? formatDate(project.stages.dispatch.endDate) : 'Not set'}</p>
+                        </div>
+                    </div>
+                    <div class="timeline-stage">
+                        <div class="stage-number">5</div>
+                        <div class="stage-info">
+                            <h3>Installation & Commissioning</h3>
+                            <p>Person: ${project.stages.installation?.person || 'Not assigned'}</p>
+                            <p>End Date: ${project.stages.installation?.endDate ? formatDate(project.stages.installation.endDate) : 'Not set'}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        content.innerHTML = `
+            <div class="timeline-stages">
+                <div class="timeline-stage">
+                    <div class="stage-number">1</div>
+                    <div class="stage-info">
+                        <h3>Design</h3>
+                        <p>Initial design and planning phase</p>
+                    </div>
+                </div>
+                <div class="timeline-stage">
+                    <div class="stage-number">2</div>
+                    <div class="stage-info">
+                        <h3>Production</h3>
+                        <p>Manufacturing and production phase</p>
+                    </div>
+                </div>
+                <div class="timeline-stage">
+                    <div class="stage-number">3</div>
+                    <div class="stage-info">
+                        <h3>Controls</h3>
+                        <p>Control systems integration</p>
+                    </div>
+                </div>
+                <div class="timeline-stage">
+                    <div class="stage-number">4</div>
+                    <div class="stage-info">
+                        <h3>Ready for Dispatch</h3>
+                        <p>Final preparation and dispatch</p>
+                    </div>
+                </div>
+                <div class="timeline-stage">
+                    <div class="stage-number">5</div>
+                    <div class="stage-info">
+                        <h3>Installation & Commissioning</h3>
+                        <p>On-site installation and commissioning</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    modal.style.display = 'flex';
 }
 
 function closeTimelineModal() {
