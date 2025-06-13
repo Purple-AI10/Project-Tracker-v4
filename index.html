@@ -26,80 +26,103 @@
     </script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="header-content">
-                <div class="logo-container">
-                    <img src="mikro-logo.svg" alt="Mikro Logo" class="logo">
-                    <h1>Project Tracker</h1>
+    <div class="layout-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <img src="mikro-logo.svg" alt="Mikro Logo" class="sidebar-logo">
+                <h2 class="sidebar-title">Project Tracker</h2>
+            </div>
+            
+            <div class="sidebar-filters">
+                <div class="filter-group">
+                    <label class="filter-label">Project Type</label>
+                    <select id="filterProjectType" onchange="filterProjects()">
+                        <option value="">All Project Types</option>
+                        <option value="p-new">P-New</option>
+                        <option value="p-repeat">P-Repeat</option>
+                        <option value="s">S</option>
+                        <option value="e">E</option>
+                    </select>
                 </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Business Unit</label>
+                    <select id="filterBU" onchange="filterProjects()">
+                        <option value="">All BUs</option>
+                        <option value="ev">EV</option>
+                        <option value="lasers">Lasers</option>
+                        <option value="global">Global</option>
+                        <option value="ezcam">EzCam</option>
+                        <option value="leak-tester">Leak Tester</option>
+                        <option value="service">Service</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Status</label>
+                    <select id="filterStatus" onchange="filterProjects()">
+                        <option value="">All Status</option>
+                        <option value="yet-to-start">Yet to start</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="on-hold">On hold</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Stage</label>
+                    <select id="filterPriority" onchange="filterProjects()">
+                        <option value="">All Stages</option>
+                        <option value="design">Design</option>
+                        <option value="production">Production</option>
+                        <option value="controls">Controls</option>
+                        <option value="ready-for-dispatch">Ready for dispatch</option>
+                        <option value="installation-and-commissioning">I&C</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Search</label>
+                    <input type="text" id="searchInput" placeholder="Search projects..." onkeyup="filterProjects()">
+                </div>
+            </div>
+            
+            <div class="sidebar-actions">
+                <div id="adminOnlyControls" style="display: none;">
+                    <button class="btn sidebar-btn" onclick="openModal()">+ Add New Project</button>
+                </div>
+                <button class="btn btn-secondary sidebar-btn" onclick="exportData()">Export Data</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
                 <button id="adminLoginBtn" class="btn admin-login-btn" onclick="showAdminLogin()">Admin Login</button>
             </div>
-        </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number total" id="totalProjects">0</div>
-                <div class="stat-label">Total Projects</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number active" id="activeProjects">0</div>
-                <div class="stat-label">Active Projects</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number completed" id="completedProjects">0</div>
-                <div class="stat-label">Completed</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number overdue" id="overdueProjects">0</div>
-                <div class="stat-label">Overdue</div>
-            </div>
-        </div>
-
-        <div class="controls">
-            <div class="controls-row">
-                <div id="adminOnlyControls" style="display: none;">
-                    <button class="btn" onclick="openModal()">+ Add New Project</button>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number total" id="totalProjects">0</div>
+                    <div class="stat-label">Total Projects</div>
                 </div>
-                <select id="filterProjectType" onchange="filterProjects()">
-                    <option value="">All Project Types</option>
-                    <option value="p-new">P-New</option>
-                    <option value="p-repeat">P-Repeat</option>
-                    <option value="s">S</option>
-                    <option value="e">E</option>
-                </select>
-                <select id="filterBU" onchange="filterProjects()">
-                    <option value="">All BUs</option>
-                    <option value="ev">EV</option>
-                    <option value="lasers">Lasers</option>
-                    <option value="global">Global</option>
-                    <option value="ezcam">EzCam</option>
-                    <option value="leak-tester">Leak Tester</option>
-                    <option value="service">Service</option>
-                    <option value="all">All</option>
-                </select>
-                <select id="filterStatus" onchange="filterProjects()">
-                    <option value="">All Status</option>
-                    <option value="yet-to-start">Yet to start</option>
-                    <option value="active">Active</option>
-                    <option value="completed">Completed</option>
-                    <option value="on-hold">On hold</option>
-                </select>
-                <select id="filterPriority" onchange="filterProjects()">
-                    <option value="">All Stages</option>
-                    <option value="design">Design</option>
-                    <option value="production">Production</option>
-                    <option value="controls">Controls</option>
-                    <option value="ready-for-dispatch">Ready for dispatch</option>
-                    <option value="installation-and-commissioning">I&C</option>
-                </select>
-                <input type="text" id="searchInput" placeholder="Search projects..." onkeyup="filterProjects()">
-                <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
+                <div class="stat-card">
+                    <div class="stat-number active" id="activeProjects">0</div>
+                    <div class="stat-label">Active Projects</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number completed" id="completedProjects">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number overdue" id="overdueProjects">0</div>
+                    <div class="stat-label">Overdue</div>
+                </div>
             </div>
-        </div>
 
-        <div class="project-grid" id="projectGrid">
-            <!-- Projects will be dynamically added here -->
+            <div class="project-grid" id="projectGrid">
+                <!-- Projects will be dynamically added here -->
+            </div>
         </div>
     </div>
 
