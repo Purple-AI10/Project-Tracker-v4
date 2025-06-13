@@ -91,6 +91,7 @@
                 <div id="adminOnlyControls" style="display: none;">
                     <button class="btn sidebar-btn" onclick="openModal()">+ Add New Project</button>
                 </div>
+                <button class="btn sidebar-btn" onclick="showTimeline()">📅 Timeline</button>
                 <button class="btn btn-secondary sidebar-btn" onclick="exportData()">Export Data</button>
             </div>
         </div>
@@ -255,6 +256,55 @@
                     <button type="submit" class="btn">Save Project</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Timeline Modal -->
+    <div class="modal" id="timelineModal">
+        <div class="modal-content timeline-modal">
+            <h2>Project Stages Timeline</h2>
+            <div id="timelineContent">
+                <div class="timeline-stages">
+                    <div class="timeline-stage">
+                        <div class="stage-number">1</div>
+                        <div class="stage-info">
+                            <h3>Design</h3>
+                            <p>Initial design and planning phase</p>
+                        </div>
+                    </div>
+                    <div class="timeline-stage">
+                        <div class="stage-number">2</div>
+                        <div class="stage-info">
+                            <h3>Production</h3>
+                            <p>Manufacturing and production phase</p>
+                        </div>
+                    </div>
+                    <div class="timeline-stage">
+                        <div class="stage-number">3</div>
+                        <div class="stage-info">
+                            <h3>Controls</h3>
+                            <p>Control systems integration</p>
+                        </div>
+                    </div>
+                    <div class="timeline-stage">
+                        <div class="stage-number">4</div>
+                        <div class="stage-info">
+                            <h3>Ready for Dispatch</h3>
+                            <p>Final preparation and dispatch</p>
+                        </div>
+                    </div>
+                    <div class="timeline-stage">
+                        <div class="stage-number">5</div>
+                        <div class="stage-info">
+                            <h3>Installation & Commissioning</h3>
+                            <p>On-site installation and commissioning</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeTimelineModal()">Close</button>
+            </div>
         </div>
     </div>
 

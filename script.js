@@ -413,6 +413,13 @@ document.addEventListener('DOMContentLoaded', function () {
             closeAdminModal();
         }
     });
+
+    // Close timeline modal when clicking outside
+    document.getElementById('timelineModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeTimelineModal();
+        }
+    });
 });
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
@@ -420,6 +427,14 @@ function toggleSidebar() {
     
     sidebar.classList.toggle('collapsed');
     mainContent.classList.toggle('sidebar-collapsed');
+}
+
+function showTimeline() {
+    document.getElementById('timelineModal').style.display = 'flex';
+}
+
+function closeTimelineModal() {
+    document.getElementById('timelineModal').style.display = 'none';
 }
 
 // Make functions available globally for onclick handlers
@@ -433,3 +448,5 @@ window.showAdminLogin = showAdminLogin;
 window.closeAdminModal = closeAdminModal;
 window.logoutAdmin = logoutAdmin;
 window.toggleSidebar = toggleSidebar;
+window.showTimeline = showTimeline;
+window.closeTimelineModal = closeTimelineModal;
