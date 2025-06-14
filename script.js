@@ -1,6 +1,8 @@
+
 let projects = [];
 let editingId = null;
 let isAdminMode = false;
+
 // Real-time Firestore listener for projects collection
 function listenForProjects() {
     db.collection("projects").onSnapshot((snapshot) => {
@@ -9,6 +11,7 @@ function listenForProjects() {
         updateStats();
     });
 }
+
 // Add or update a project in Firestore
 async function upsertProject(project) {
     try {
@@ -19,12 +22,12 @@ async function upsertProject(project) {
         alert("Failed to save project: " + error.message);
     }
 }
+
 // Delete a project in Firestore
 async function deleteProject(id) {
     if (confirm('Are you sure you want to delete this project?')) {
         try {
             await db.collection("projects").doc(String(id)).delete();
-            // Local update will auto-happen via Firestore listener
         }
         catch (error) {
             console.error('Error deleting project:', error);
@@ -32,37 +35,73 @@ async function deleteProject(id) {
         }
     }
 }
+
+// Update stage completion status
+async function updateStageCompletion(projectId, stage, isCompleted) {
+    const project = projects.find(p => p.id == projectId);
+    if (project) {
+        if (!project.stages) {
+            project.stages = {};
+        }
+        if (!project.stages[stage]) {
+            project.stages[stage] = {};
+        }
+        
+        project.stages[stage].completed = isCompleted;
+        project.stages[stage].completedTimestamp = isCompleted ? new Date().toISOString() : 'Yet to be completed';
+        
+        await upsertProject(project);
+    }
+}
+
+// Check if a stage is overdue
+function isStageOverdue(stage) {
+    if (!stage.dueDate || stage.completed) return false;
+    return new Date(stage.dueDate) < new Date();
+}
+
+// Get all overdue projects based on stage deadlines
+function getOverdueProjects() {
+    return projects.filter(project => {
+        if (!project.stages) return false;
+        
+        const stages = ['design', 'production', 'controls', 'dispatch', 'installation'];
+        return stages.some(stageName => {
+            const stage = project.stages[stageName];
+            return stage && isStageOverdue(stage);
+        });
+    });
+}
+
 function renderProjects() {
     const grid = document.getElementById('projectGrid');
     const filteredProjects = getFilteredProjects();
+    
     // Sort projects by creation date (newest first)
     const sortedProjects = filteredProjects.sort((a, b) => {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+
     grid.innerHTML = '';
     sortedProjects.forEach((project) => {
         const projectCard = createProjectCard(project);
         grid.appendChild(projectCard);
     });
 }
+
 function createProjectCard(project) {
     const card = document.createElement('div');
     card.className = `project-card priority-${project.priority} fade-in`;
-    const isOverdue = new Date(project.deadline) < new Date() && project.status !== 'completed';
-    const actualStatus = isOverdue ? 'overdue' : project.status;
+
     card.innerHTML = `
         <div class="project-header">
             <div>
                 <div class="project-title">${project.name}</div>
-                <div class="status-badge status-${actualStatus}">${actualStatus}</div>
+                <div class="status-badge status-${project.status}">${project.status}</div>
             </div>
         </div>
         <div class="project-description">${project.description}</div>
         <div class="project-meta">
-            <div class="meta-item">
-                <span class="meta-icon">📅</span>
-                <span>${formatDate(project.deadline)}</span>
-            </div>
             <div class="meta-item">
                 <span class="meta-icon">👤</span>
                 <span>${project.assignee}</span>
@@ -90,12 +129,14 @@ function createProjectCard(project) {
     `;
     return card;
 }
+
 function getFilteredProjects() {
     const statusFilter = document.getElementById('filterStatus').value;
     const priorityFilter = document.getElementById('filterPriority').value;
     const projectTypeFilter = document.getElementById('filterProjectType').value;
     const buFilter = document.getElementById('filterBU').value;
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
     return projects.filter((project) => {
         const matchesStatus = !statusFilter || project.status === statusFilter;
         const matchesPriority = !priorityFilter || project.priority === priorityFilter;
@@ -105,45 +146,48 @@ function getFilteredProjects() {
             project.name.toLowerCase().includes(searchTerm) ||
             project.description.toLowerCase().includes(searchTerm) ||
             project.assignee.toLowerCase().includes(searchTerm);
+
         return matchesStatus && matchesPriority && matchesProjectType && matchesBU && matchesSearch;
     });
 }
+
 function updateStats() {
     const total = projects.length;
     const active = projects.filter((p) => p.status === 'active').length;
     const completed = projects.filter((p) => p.status === 'completed').length;
-    const overdue = projects.filter((p) => new Date(p.deadline) < new Date() && p.status !== 'completed').length;
+    const overdue = getOverdueProjects().length;
+
     document.getElementById('totalProjects').textContent = total.toString();
     document.getElementById('activeProjects').textContent = active.toString();
     document.getElementById('completedProjects').textContent = completed.toString();
     document.getElementById('overdueProjects').textContent = overdue.toString();
 }
+
 function calculateProgress(status, priority) {
-    if (status === 'completed')
-        return 100;
-    if (status === 'yet-to-start')
-        return 0;
-    // For active or on-hold status, calculate based on project stage
+    if (status === 'completed') return 100;
+    if (status === 'yet-to-start') return 0;
+    
     switch (priority) {
         case 'design': return 5;
         case 'production': return 20;
         case 'controls': return 40;
         case 'ready-for-dispatch': return 60;
         case 'installation-and-commissioning': return 80;
-        default: return 10; // Default progress for active projects
+        default: return 10;
     }
 }
+
 function openModal(project = null) {
     const modal = document.getElementById('projectModal');
     const title = document.getElementById('modalTitle');
     const form = document.getElementById('projectForm');
+
     if (project) {
         title.textContent = 'Edit Project';
         editingId = project.id;
         document.getElementById('projectName').value = project.name;
         document.getElementById('projectDescription').value = project.description;
         document.getElementById('projectStatus').value = project.status;
-        document.getElementById('projectDeadline').value = project.deadline;
         document.getElementById('projectAssignee').value = project.assignee;
         document.getElementById('projectRemarks').value = project.remarks || '';
         document.getElementById('projectType').value = project.projectType || '';
@@ -152,22 +196,21 @@ function openModal(project = null) {
         // Populate stage fields if they exist
         if (project.stages) {
             document.getElementById('designPerson').value = project.stages.design?.person || '';
-            document.getElementById('designTime').value = project.stages.design?.endDate || '';
+            document.getElementById('designTime').value = project.stages.design?.dueDate || '';
             document.getElementById('productionPerson').value = project.stages.production?.person || '';
-            document.getElementById('productionTime').value = project.stages.production?.endDate || '';
+            document.getElementById('productionTime').value = project.stages.production?.dueDate || '';
             document.getElementById('controlsPerson').value = project.stages.controls?.person || '';
-            document.getElementById('controlsTime').value = project.stages.controls?.endDate || '';
+            document.getElementById('controlsTime').value = project.stages.controls?.dueDate || '';
             document.getElementById('dispatchPerson').value = project.stages.dispatch?.person || '';
-            document.getElementById('dispatchTime').value = project.stages.dispatch?.endDate || '';
+            document.getElementById('dispatchTime').value = project.stages.dispatch?.dueDate || '';
             document.getElementById('installationPerson').value = project.stages.installation?.person || '';
-            document.getElementById('installationTime').value = project.stages.installation?.endDate || '';
+            document.getElementById('installationTime').value = project.stages.installation?.dueDate || '';
         }
     }
     else {
         title.textContent = 'Add New Project';
         editingId = null;
         form.reset();
-        // Reset select fields to show placeholder options
         document.getElementById('projectType').value = '';
         document.getElementById('projectBU').value = '';
         
@@ -185,45 +228,72 @@ function openModal(project = null) {
     }
     modal.style.display = 'flex';
 }
+
 function closeModal() {
     document.getElementById('projectModal').style.display = 'none';
     editingId = null;
 }
+
 function editProject(id) {
     const project = projects.find((p) => p.id == id);
     if (project) {
         openModal(project);
     }
 }
+
 function filterProjects() {
     renderProjects();
 }
+
+function filterByStatus(status) {
+    document.getElementById('filterStatus').value = status;
+    filterProjects();
+}
+
+function filterByOverdue() {
+    // Reset other filters and show only overdue projects
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterPriority').value = '';
+    document.getElementById('filterProjectType').value = '';
+    document.getElementById('filterBU').value = '';
+    document.getElementById('searchInput').value = '';
+    
+    // Filter to show only overdue projects
+    const grid = document.getElementById('projectGrid');
+    const overdueProjects = getOverdueProjects();
+    
+    grid.innerHTML = '';
+    overdueProjects.forEach((project) => {
+        const projectCard = createProjectCard(project);
+        grid.appendChild(projectCard);
+    });
+}
+
 function exportData() {
-    // Convert JSON to CSV
     if (projects.length === 0) {
         alert('No projects to export');
         return;
     }
-    // Define CSV headers - include all data fields
-    const headers = ['ID', 'Name', 'Description', 'Status', 'Project Stage', 'Deadline', 'Project Manager', 'Progress (%)', 'Remarks', 'Project Type', 'BU', 'Created At'];
-    // Convert projects to CSV rows
+
+    const headers = ['ID', 'Name', 'Description', 'Status', 'Project Stage', 'Project Manager', 'Progress (%)', 'Remarks', 'Project Type', 'BU', 'Created At'];
+    
     const csvRows = [
-        headers.join(','), // Header row
+        headers.join(','),
         ...projects.map((project) => [
             project.id,
-            `"${project.name.replace(/"/g, '""')}"`, // Escape quotes in name
-            `"${project.description.replace(/"/g, '""')}"`, // Escape quotes in description
+            `"${project.name.replace(/"/g, '""')}"`,
+            `"${project.description.replace(/"/g, '""')}"`,
             project.status,
             project.priority,
-            project.deadline,
-            `"${project.assignee.replace(/"/g, '""')}"`, // Escape quotes in assignee
+            `"${project.assignee.replace(/"/g, '""')}"`,
             project.progress,
-            `"${(project.remarks || '').replace(/"/g, '""')}"`, // Escape quotes in remarks
+            `"${(project.remarks || '').replace(/"/g, '""')}"`,
             project.projectType || '',
             project.bu || '',
             project.createdAt
         ].join(','))
     ];
+
     const csvContent = csvRows.join('\n');
     const dataBlob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(dataBlob);
@@ -232,6 +302,7 @@ function exportData() {
     link.download = 'projects_export.csv';
     link.click();
 }
+
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -240,13 +311,16 @@ function formatDate(dateString) {
         day: 'numeric'
     });
 }
+
 function showAdminLogin() {
     document.getElementById('adminModal').style.display = 'flex';
     document.getElementById('adminPassword').value = '';
 }
+
 function closeAdminModal() {
     document.getElementById('adminModal').style.display = 'none';
 }
+
 function logoutAdmin() {
     isAdminMode = false;
     document.getElementById('adminOnlyControls').style.display = 'none';
@@ -254,9 +328,9 @@ function logoutAdmin() {
     adminBtn.textContent = 'Admin Login';
     adminBtn.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
     adminBtn.onclick = showAdminLogin;
-    renderProjects(); // Re-render to hide action buttons
+    renderProjects();
 }
-// Optional: load sample data if Firestore is empty (for demo only)
+
 function loadSampleData() {
     if (projects.length === 0) {
         const sampleProjects = [
@@ -266,169 +340,22 @@ function loadSampleData() {
                 description: "Complete overhaul of the existing e-commerce platform with modern UI/UX",
                 status: "active",
                 priority: "production",
-                deadline: "2025-07-15",
                 assignee: "Sarah Johnson",
                 progress: 20,
                 remarks: "UI mockups completed, backend integration in progress",
                 projectType: "p-new",
                 bu: "global",
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: Date.now() + 2,
-                name: "Mobile App Development",
-                description: "Native mobile app for iOS and Android platforms",
-                status: "yet-to-start",
-                priority: "design",
-                deadline: "2025-08-30",
-                assignee: "Mike Chen",
-                progress: 0,
-                remarks: "Waiting for design approval",
-                projectType: "p-repeat",
-                bu: "ev",
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: Date.now() + 3,
-                name: "API Documentation",
-                description: "Comprehensive API documentation for all endpoints",
-                status: "completed",
-                priority: "installation-and-commissioning",
-                deadline: "2025-05-20",
-                assignee: "Alex Rodriguez",
-                progress: 100,
-                remarks: "Documentation deployed successfully",
-                projectType: "s",
-                bu: "lasers",
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: Date.now() + 4,
-                name: "Database Migration",
-                description: "Migrate legacy database to new cloud infrastructure",
-                status: "on-hold",
-                priority: "controls",
-                deadline: "2025-05-01",
-                assignee: "Lisa Wang",
-                progress: 40,
-                remarks: "Waiting for infrastructure approval",
-                projectType: "e",
-                bu: "service",
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                stages: {
+                    design: { person: 'John Doe', dueDate: '2025-02-15', completed: false, completedTimestamp: 'Yet to be completed' },
+                    production: { person: 'Jane Smith', dueDate: '2025-03-01', completed: false, completedTimestamp: 'Yet to be completed' }
+                }
             }
         ];
         sampleProjects.forEach(async (p) => {
             await upsertProject(p);
         });
     }
-}
-// Form submission handler and modal logic
-document.addEventListener('DOMContentLoaded', function () {
-    // Listen for project changes from Firestore
-    listenForProjects();
-    document.getElementById('projectForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const status = document.getElementById('projectStatus').value;
-        const progress = calculateProgress(status, 'design'); // Default stage calculation
-        const formData = {
-            name: document.getElementById('projectName').value,
-            description: document.getElementById('projectDescription').value,
-            status: status,
-            priority: 'design', // Default to design stage
-            deadline: document.getElementById('projectDeadline').value,
-            assignee: document.getElementById('projectAssignee').value,
-            progress: progress,
-            remarks: document.getElementById('projectRemarks').value || '',
-            projectType: document.getElementById('projectType').value,
-            bu: document.getElementById('projectBU').value,
-            stages: {
-                design: {
-                    person: document.getElementById('designPerson').value || '',
-                    endDate: document.getElementById('designTime').value || ''
-                },
-                production: {
-                    person: document.getElementById('productionPerson').value || '',
-                    endDate: document.getElementById('productionTime').value || ''
-                },
-                controls: {
-                    person: document.getElementById('controlsPerson').value || '',
-                    endDate: document.getElementById('controlsTime').value || ''
-                },
-                dispatch: {
-                    person: document.getElementById('dispatchPerson').value || '',
-                    endDate: document.getElementById('dispatchTime').value || ''
-                },
-                installation: {
-                    person: document.getElementById('installationPerson').value || '',
-                    endDate: document.getElementById('installationTime').value || ''
-                }
-            }
-        };
-        let project;
-        if (editingId) {
-            // Update existing project in array
-            const index = projects.findIndex((p) => p.id == editingId);
-            if (index !== -1) {
-                project = { ...projects[index], ...formData };
-                projects[index] = project;
-            }
-        }
-        else {
-            // Add new project
-            project = {
-                id: Date.now(),
-                ...formData,
-                createdAt: new Date().toISOString()
-            };
-            projects.push(project);
-        }
-        await upsertProject(project);
-        closeModal();
-    });
-    // Close modal when clicking outside
-    document.getElementById('projectModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeModal();
-        }
-    });
-    // Admin form submission
-    document.getElementById('adminForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-        const password = document.getElementById('adminPassword').value;
-        if (password === 'mikro-admin') {
-            isAdminMode = true;
-            document.getElementById('adminOnlyControls').style.display = 'inline-block';
-            const adminBtn = document.getElementById('adminLoginBtn');
-            adminBtn.textContent = 'Admin Mode';
-            adminBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-            adminBtn.onclick = logoutAdmin;
-            closeAdminModal();
-            renderProjects(); // Re-render to show action buttons
-        }
-        else {
-            alert('Incorrect password');
-        }
-    });
-    // Close admin modal when clicking outside
-    document.getElementById('adminModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeAdminModal();
-        }
-    });
-
-    // Close timeline modal when clicking outside
-    document.getElementById('timelineModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeTimelineModal();
-        }
-    });
-});
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const mainContent = document.querySelector('.main-content');
-    
-    sidebar.classList.toggle('collapsed');
-    mainContent.classList.toggle('sidebar-collapsed');
 }
 
 function showTimeline(projectId = null) {
@@ -443,46 +370,11 @@ function showTimeline(projectId = null) {
                     <h3>${project.name} - Timeline</h3>
                 </div>
                 <div class="timeline-stages">
-                    <div class="timeline-stage">
-                        <div class="stage-number">1</div>
-                        <div class="stage-info">
-                            <h3>Design</h3>
-                            <p>Person: ${project.stages.design?.person || 'Not assigned'}</p>
-                            <p>End Date: ${project.stages.design?.endDate ? formatDate(project.stages.design.endDate) : 'Not set'}</p>
-                        </div>
-                    </div>
-                    <div class="timeline-stage">
-                        <div class="stage-number">2</div>
-                        <div class="stage-info">
-                            <h3>Production</h3>
-                            <p>Person: ${project.stages.production?.person || 'Not assigned'}</p>
-                            <p>End Date: ${project.stages.production?.endDate ? formatDate(project.stages.production.endDate) : 'Not set'}</p>
-                        </div>
-                    </div>
-                    <div class="timeline-stage">
-                        <div class="stage-number">3</div>
-                        <div class="stage-info">
-                            <h3>Controls</h3>
-                            <p>Person: ${project.stages.controls?.person || 'Not assigned'}</p>
-                            <p>End Date: ${project.stages.controls?.endDate ? formatDate(project.stages.controls.endDate) : 'Not set'}</p>
-                        </div>
-                    </div>
-                    <div class="timeline-stage">
-                        <div class="stage-number">4</div>
-                        <div class="stage-info">
-                            <h3>Ready for Dispatch</h3>
-                            <p>Person: ${project.stages.dispatch?.person || 'Not assigned'}</p>
-                            <p>End Date: ${project.stages.dispatch?.endDate ? formatDate(project.stages.dispatch.endDate) : 'Not set'}</p>
-                        </div>
-                    </div>
-                    <div class="timeline-stage">
-                        <div class="stage-number">5</div>
-                        <div class="stage-info">
-                            <h3>Installation & Commissioning</h3>
-                            <p>Person: ${project.stages.installation?.person || 'Not assigned'}</p>
-                            <p>End Date: ${project.stages.installation?.endDate ? formatDate(project.stages.installation.endDate) : 'Not set'}</p>
-                        </div>
-                    </div>
+                    ${generateStageHTML('design', 1, 'Design', project)}
+                    ${generateStageHTML('production', 2, 'Production', project)}
+                    ${generateStageHTML('controls', 3, 'Controls', project)}
+                    ${generateStageHTML('dispatch', 4, 'Ready for Dispatch', project)}
+                    ${generateStageHTML('installation', 5, 'Installation & Commissioning', project)}
                 </div>
             `;
         }
@@ -531,9 +423,161 @@ function showTimeline(projectId = null) {
     modal.style.display = 'flex';
 }
 
+function generateStageHTML(stageName, number, title, project) {
+    const stage = project.stages[stageName] || {};
+    const isCompleted = stage.completed || false;
+    const isOverdue = isStageOverdue(stage);
+    const toggleDisabled = !isAdminMode ? 'disabled' : '';
+    
+    return `
+        <div class="timeline-stage">
+            <div class="stage-number">${number}</div>
+            <div class="stage-info">
+                <div class="stage-completion">
+                    <h3>${title}</h3>
+                    <label class="toggle-switch ${toggleDisabled}">
+                        <input type="checkbox" ${isCompleted ? 'checked' : ''} 
+                               onchange="updateStageCompletion(${project.id}, '${stageName}', this.checked)"
+                               ${!isAdminMode ? 'disabled' : ''}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <p>Person: ${stage.person || 'Not assigned'}</p>
+                <p>Due Date: ${stage.dueDate ? formatDate(stage.dueDate) : 'Not set'}</p>
+                ${isCompleted ? `<p class="completion-status">✅ Completed: ${stage.completedTimestamp ? formatDate(stage.completedTimestamp) : 'N/A'}</p>` : 
+                  isOverdue ? `<p class="completion-status">⚠️ Overdue</p>` : 
+                  `<p class="completion-status">⏳ In Progress</p>`}
+            </div>
+        </div>
+    `;
+}
+
 function closeTimelineModal() {
     document.getElementById('timelineModal').style.display = 'none';
 }
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    sidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('sidebar-collapsed');
+}
+
+// Form submission handler and modal logic
+document.addEventListener('DOMContentLoaded', function () {
+    listenForProjects();
+
+    document.getElementById('projectForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const status = document.getElementById('projectStatus').value;
+        const progress = calculateProgress(status, 'design');
+
+        const formData = {
+            name: document.getElementById('projectName').value,
+            description: document.getElementById('projectDescription').value,
+            status: status,
+            priority: 'design',
+            assignee: document.getElementById('projectAssignee').value,
+            progress: progress,
+            remarks: document.getElementById('projectRemarks').value || '',
+            projectType: document.getElementById('projectType').value,
+            bu: document.getElementById('projectBU').value,
+            stages: {
+                design: {
+                    person: document.getElementById('designPerson').value || '',
+                    dueDate: document.getElementById('designTime').value || '',
+                    completed: false,
+                    completedTimestamp: 'Yet to be completed'
+                },
+                production: {
+                    person: document.getElementById('productionPerson').value || '',
+                    dueDate: document.getElementById('productionTime').value || '',
+                    completed: false,
+                    completedTimestamp: 'Yet to be completed'
+                },
+                controls: {
+                    person: document.getElementById('controlsPerson').value || '',
+                    dueDate: document.getElementById('controlsTime').value || '',
+                    completed: false,
+                    completedTimestamp: 'Yet to be completed'
+                },
+                dispatch: {
+                    person: document.getElementById('dispatchPerson').value || '',
+                    dueDate: document.getElementById('dispatchTime').value || '',
+                    completed: false,
+                    completedTimestamp: 'Yet to be completed'
+                },
+                installation: {
+                    person: document.getElementById('installationPerson').value || '',
+                    dueDate: document.getElementById('installationTime').value || '',
+                    completed: false,
+                    completedTimestamp: 'Yet to be completed'
+                }
+            }
+        };
+
+        let project;
+        if (editingId) {
+            const index = projects.findIndex((p) => p.id == editingId);
+            if (index !== -1) {
+                project = { ...projects[index], ...formData };
+                projects[index] = project;
+            }
+        }
+        else {
+            project = {
+                id: Date.now(),
+                ...formData,
+                createdAt: new Date().toISOString()
+            };
+            projects.push(project);
+        }
+
+        await upsertProject(project);
+        closeModal();
+    });
+
+    // Modal click outside to close
+    document.getElementById('projectModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeModal();
+        }
+    });
+
+    // Admin form submission
+    document.getElementById('adminForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const password = document.getElementById('adminPassword').value;
+        if (password === 'mikro-admin') {
+            isAdminMode = true;
+            document.getElementById('adminOnlyControls').style.display = 'inline-block';
+            const adminBtn = document.getElementById('adminLoginBtn');
+            adminBtn.textContent = 'Admin Mode';
+            adminBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            adminBtn.onclick = logoutAdmin;
+            closeAdminModal();
+            renderProjects();
+        }
+        else {
+            alert('Incorrect password');
+        }
+    });
+
+    // Close admin modal when clicking outside
+    document.getElementById('adminModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeAdminModal();
+        }
+    });
+
+    // Close timeline modal when clicking outside
+    document.getElementById('timelineModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeTimelineModal();
+        }
+    });
+});
 
 // Make functions available globally for onclick handlers
 window.openModal = openModal;
@@ -541,6 +585,8 @@ window.closeModal = closeModal;
 window.editProject = editProject;
 window.deleteProject = deleteProject;
 window.filterProjects = filterProjects;
+window.filterByStatus = filterByStatus;
+window.filterByOverdue = filterByOverdue;
 window.exportData = exportData;
 window.showAdminLogin = showAdminLogin;
 window.closeAdminModal = closeAdminModal;
@@ -548,3 +594,4 @@ window.logoutAdmin = logoutAdmin;
 window.toggleSidebar = toggleSidebar;
 window.showTimeline = showTimeline;
 window.closeTimelineModal = closeTimelineModal;
+window.updateStageCompletion = updateStageCompletion;

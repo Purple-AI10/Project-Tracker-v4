@@ -82,6 +82,10 @@ body {
     transition: border-color 0.3s ease;
 }
 
+#searchInput {
+    font-weight: bold;
+}
+
 .sidebar-filters select:focus,
 .sidebar-filters input:focus {
     outline: none;
@@ -197,6 +201,79 @@ body {
 .stat-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card.clickable {
+    cursor: pointer;
+}
+
+.stat-card.clickable:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    margin-left: 15px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: #2196F3;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.toggle-switch.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.stage-completion {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.completion-status {
+    font-size: 0.8rem;
+    color: #666;
+    font-style: italic;
 }
 
 .stat-number {
@@ -419,7 +496,7 @@ input:focus, select:focus {
 }
 
 .modal-content {
-    background: linear-gradient(135deg, #f3f0ff, #e9e5ff, #d6c9ff, #c2a9ff, #a987ff, #9370db, #7b68ee);
+    background: #e6e6fa;
     border-radius: 12px;
     padding: 30px;
     max-width: 800px;
@@ -431,13 +508,11 @@ input:focus, select:focus {
 }
 
 .modal h2 {
-    color: #ffffff;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    color: #000000;
 }
 
 .form-group label {
-    color: #ffffff;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    color: #000000;
 }
 
 .stages-container {
@@ -449,11 +524,10 @@ input:focus, select:focus {
 }
 
 .stages-title {
-    color: #ffffff;
+    color: #000000;
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 15px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .stage-item {
@@ -468,10 +542,9 @@ input:focus, select:focus {
 }
 
 .stage-label {
-    color: #ffffff;
+    color: #000000;
     font-weight: 500;
     font-size: 0.9rem;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .stage-input-group {
@@ -481,10 +554,9 @@ input:focus, select:focus {
 }
 
 .stage-input-label {
-    color: #ffffff;
+    color: #000000;
     font-size: 0.8rem;
     font-weight: 500;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .stage-input {

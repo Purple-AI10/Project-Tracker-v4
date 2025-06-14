@@ -34,6 +34,11 @@
             
             <div class="sidebar-filters">
                 <div class="filter-group">
+                    <label class="filter-label">Search</label>
+                    <input type="text" id="searchInput" placeholder="Search projects..." onkeyup="filterProjects()">
+                </div>
+                
+                <div class="filter-group">
                     <label class="filter-label">Project Type</label>
                     <select id="filterProjectType" onchange="filterProjects()">
                         <option value="">All Project Types</option>
@@ -80,11 +85,6 @@
                         <option value="installation-and-commissioning">I&C</option>
                     </select>
                 </div>
-                
-                <div class="filter-group">
-                    <label class="filter-label">Search</label>
-                    <input type="text" id="searchInput" placeholder="Search projects..." onkeyup="filterProjects()">
-                </div>
             </div>
             
             <div class="sidebar-actions">
@@ -109,15 +109,15 @@
                     <div class="stat-number total" id="totalProjects">0</div>
                     <div class="stat-label">Total Projects</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="filterByStatus('active')">
                     <div class="stat-number active" id="activeProjects">0</div>
                     <div class="stat-label">Active Projects</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="filterByStatus('completed')">
                     <div class="stat-number completed" id="completedProjects">0</div>
                     <div class="stat-label">Completed</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="filterByOverdue()">
                     <div class="stat-number overdue" id="overdueProjects">0</div>
                     <div class="stat-label">Overdue</div>
                 </div>
@@ -145,10 +145,6 @@
                 <div class="form-group">
                     <label for="projectAssignee">Project Manager *</label>
                     <input type="text" id="projectAssignee" placeholder="Project manager name" required>
-                </div>
-                <div class="form-group">
-                    <label for="projectDeadline">Project Deadline *</label>
-                    <input type="date" id="projectDeadline" required>
                 </div>
                 <div class="form-group">
                     <label for="projectType">Project Type *</label>
@@ -193,7 +189,7 @@
                             <input type="text" id="designPerson" class="stage-input" placeholder="Enter name">
                         </div>
                         <div class="stage-input-group">
-                            <label class="stage-input-label">End Date</label>
+                            <label class="stage-input-label">Due Date</label>
                             <input type="date" id="designTime" class="stage-input">
                         </div>
                     </div>
@@ -205,7 +201,7 @@
                             <input type="text" id="productionPerson" class="stage-input" placeholder="Enter name">
                         </div>
                         <div class="stage-input-group">
-                            <label class="stage-input-label">End Date</label>
+                            <label class="stage-input-label">Due Date</label>
                             <input type="date" id="productionTime" class="stage-input">
                         </div>
                     </div>
@@ -217,7 +213,7 @@
                             <input type="text" id="controlsPerson" class="stage-input" placeholder="Enter name">
                         </div>
                         <div class="stage-input-group">
-                            <label class="stage-input-label">End Date</label>
+                            <label class="stage-input-label">Due Date</label>
                             <input type="date" id="controlsTime" class="stage-input">
                         </div>
                     </div>
@@ -229,7 +225,7 @@
                             <input type="text" id="dispatchPerson" class="stage-input" placeholder="Enter name">
                         </div>
                         <div class="stage-input-group">
-                            <label class="stage-input-label">End Date</label>
+                            <label class="stage-input-label">Due Date</label>
                             <input type="date" id="dispatchTime" class="stage-input">
                         </div>
                     </div>
@@ -241,7 +237,7 @@
                             <input type="text" id="installationPerson" class="stage-input" placeholder="Enter name">
                         </div>
                         <div class="stage-input-group">
-                            <label class="stage-input-label">End Date</label>
+                            <label class="stage-input-label">Due Date</label>
                             <input type="date" id="installationTime" class="stage-input">
                         </div>
                     </div>
