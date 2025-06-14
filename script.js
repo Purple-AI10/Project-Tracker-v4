@@ -6,7 +6,19 @@ let isAdminMode = false;
 // Real-time Firestore listener for projects collection
 function listenForProjects() {
     db.collection("projects").onSnapshot((snapshot) => {
-        projects = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+        projects = snapshot.docs.map((doc) => {
+            const project = { ...doc.data(), id: doc.id };
+            // Ensure current project stage is set for existing projects
+            if (!project.currentProjectStage) {
+                project.currentProjectStage = getCurrentProjectStage(project);
+            }
+            // Recalculate progress if needed
+            const newProgress = calculateProgress(project.status, project.currentProjectStage);
+            if (project.progress !== newProgress) {
+                project.progress = newProgress;
+            }
+            return project;
+        });
         renderProjects();
         updateStats();
     });
@@ -50,8 +62,59 @@ async function updateStageCompletion(projectId, stage, isCompleted) {
         project.stages[stage].completed = isCompleted;
         project.stages[stage].completedTimestamp = isCompleted ? new Date().toISOString() : 'Yet to be completed';
         
+        // Update current project stage based on completed toggles
+        project.currentProjectStage = getCurrentProjectStage(project);
+        
+        // Update progress based on status and current stage
+        project.progress = calculateProgress(project.status, project.currentProjectStage);
+        
         await upsertProject(project);
     }
+}
+
+// Determine current project stage based on completed toggles
+function getCurrentProjectStage(project) {
+    if (!project.stages) return 'design';
+    
+    const stages = ['design', 'production', 'controls', 'dispatch', 'installation'];
+    
+    // Find the last completed stage
+    let currentStage = 'design';
+    for (let i = 0; i < stages.length; i++) {
+        const stage = project.stages[stages[i]];
+        if (stage && stage.completed) {
+            // If this stage is completed, move to next stage
+            if (i < stages.length - 1) {
+                currentStage = stages[i + 1];
+            } else {
+                // All stages completed
+                currentStage = 'installation';
+            }
+        } else {
+            // This stage is not completed, so this is the current stage
+            break;
+        }
+    }
+    
+    return currentStage;
+}
+
+// Get current due date based on current project stage
+function getCurrentDueDate(project) {
+    if (!project.stages || !project.currentProjectStage) return 'Not set';
+    
+    const stageMapping = {
+        'design': 'design',
+        'production': 'production', 
+        'controls': 'controls',
+        'ready-for-dispatch': 'dispatch',
+        'installation-and-commissioning': 'installation'
+    };
+    
+    const stageName = stageMapping[project.currentProjectStage] || project.currentProjectStage;
+    const stage = project.stages[stageName];
+    
+    return stage && stage.dueDate ? stage.dueDate : 'Not set';
 }
 
 // Check if a stage is overdue
@@ -93,6 +156,9 @@ function createProjectCard(project) {
     const card = document.createElement('div');
     card.className = `project-card priority-${project.priority} fade-in`;
 
+    const currentStage = project.currentProjectStage || 'design';
+    const currentDueDate = getCurrentDueDate(project);
+    
     card.innerHTML = `
         <div class="project-header">
             <div>
@@ -108,11 +174,15 @@ function createProjectCard(project) {
             </div>
             <div class="meta-item">
                 <span class="meta-icon">⚡</span>
-                <span>${project.priority.replace(/-/g, ' ').toUpperCase()}</span>
+                <span>${currentStage.replace(/-/g, ' ').toUpperCase()}</span>
             </div>
             <div class="meta-item">
                 <span class="meta-icon">🏢</span>
                 <span>${project.bu ? project.bu.toUpperCase() : 'N/A'}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-icon">📅</span>
+                <span>Due: ${currentDueDate !== 'Not set' ? formatDate(currentDueDate) : 'Not set'}</span>
             </div>
         </div>
         <div class="progress-bar">
@@ -163,18 +233,23 @@ function updateStats() {
     document.getElementById('overdueProjects').textContent = overdue.toString();
 }
 
-function calculateProgress(status, priority) {
+function calculateProgress(status, currentProjectStage) {
     if (status === 'completed') return 100;
     if (status === 'yet-to-start') return 0;
     
-    switch (priority) {
-        case 'design': return 5;
-        case 'production': return 20;
-        case 'controls': return 40;
-        case 'ready-for-dispatch': return 60;
-        case 'installation-and-commissioning': return 80;
-        default: return 10;
+    // For active or on-hold status, calculate based on current project stage
+    if (status === 'active' || status === 'on-hold') {
+        switch (currentProjectStage) {
+            case 'design': return 5;
+            case 'production': return 20;
+            case 'controls': return 40;
+            case 'ready-for-dispatch': return 60;
+            case 'installation-and-commissioning': return 80;
+            default: return 5;
+        }
     }
+    
+    return 0;
 }
 
 function openModal(project = null) {
@@ -267,6 +342,18 @@ function filterByOverdue() {
         const projectCard = createProjectCard(project);
         grid.appendChild(projectCard);
     });
+}
+
+function clearAllFilters() {
+    // Reset all filters to show all projects
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterPriority').value = '';
+    document.getElementById('filterProjectType').value = '';
+    document.getElementById('filterBU').value = '';
+    document.getElementById('searchInput').value = '';
+    
+    // Re-render all projects
+    renderProjects();
 }
 
 function exportData() {
@@ -483,6 +570,7 @@ document.addEventListener('DOMContentLoaded', function () {
             remarks: document.getElementById('projectRemarks').value || '',
             projectType: document.getElementById('projectType').value,
             bu: document.getElementById('projectBU').value,
+            currentProjectStage: 'design',
             stages: {
                 design: {
                     person: document.getElementById('designPerson').value || '',
@@ -522,6 +610,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const index = projects.findIndex((p) => p.id == editingId);
             if (index !== -1) {
                 project = { ...projects[index], ...formData };
+                // Ensure current project stage is set
+                if (!project.currentProjectStage) {
+                    project.currentProjectStage = getCurrentProjectStage(project);
+                }
+                // Recalculate progress based on new values
+                project.progress = calculateProgress(project.status, project.currentProjectStage);
                 projects[index] = project;
             }
         }
@@ -587,6 +681,7 @@ window.deleteProject = deleteProject;
 window.filterProjects = filterProjects;
 window.filterByStatus = filterByStatus;
 window.filterByOverdue = filterByOverdue;
+window.clearAllFilters = clearAllFilters;
 window.exportData = exportData;
 window.showAdminLogin = showAdminLogin;
 window.closeAdminModal = closeAdminModal;
