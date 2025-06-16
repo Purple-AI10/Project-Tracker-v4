@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Tracker - Senior Developer Dashboard</title>
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAABkUlEQVR4nO2WsU7DMBCGvwZUKoJOlUph4BF4A8YOvAJvwMwjsLEysDExMvIIDAw8AQMLAx0YGBhYGFvYOvIK/JZjOXEs14kdOiCdJNn+7373/3dn3wVGjBgxYrwn4A+AOWAd2AE6QFcp1QE6wBawDswBI37zN+ATUAR+gEfgHrgF7oAb4Bq4BH6Bt0PnkZVNJE8SIHsLrAKfnQTIkQCZH2DFTwCJxPcK+AGKrgBktgLMD3cD5EjgB1h2BSCzBWB+7/9ZIROwC5RCBZANsQ+sOQI4SAKwC2wClb8IJL4KbAJHnhkwBWwDdyEBJJ4qcAys+5oBY8Ap8BUCQOKJAsfAR2AJOAfqoQAknqJwBJwCHy8JcAE0QgJIPBHhCDgBKraBPqLADjDqAqAqHAEZK2AXeA0ZQOKxCs+Bo2hMgCtgNQEAmxmglQDgNjAdKkApAUCZBKARAqArHAE5K+AA+HEJIHu9ZcJrNxEgtdMNwHsIAAepFj8PrACv/8oG2zAyGICoEfNTG8bfwYgRI0aMGGLEeAY5sGGRkb5PnwAAAABJRU5ErkJggg==">
     <link rel="stylesheet" href="styles.css">
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -78,11 +79,14 @@
                     <label class="filter-label">Stage</label>
                     <select id="filterPriority" onchange="filterProjects()">
                         <option value="">All Stages</option>
-                        <option value="design">Design</option>
-                        <option value="production">Production</option>
+                        <option value="mechanical-design">Mechanical Design</option>
+                        <option value="electrical-design">Electrical Design</option>
+                        <option value="manufacturing">Manufacturing</option>
+                        <option value="wiring">Wiring</option>
+                        <option value="assembly">Assembly</option>
                         <option value="controls">Controls</option>
-                        <option value="ready-for-dispatch">Ready for dispatch</option>
-                        <option value="installation-and-commissioning">I&C</option>
+                        <option value="dispatch">Ready for Dispatch</option>
+                        <option value="installation">I&C</option>
                     </select>
                 </div>
             </div>
@@ -92,6 +96,7 @@
                     <button class="btn sidebar-btn" onclick="openModal()">+ Add New Project</button>
                 </div>
                 <button class="btn btn-secondary sidebar-btn" onclick="exportData()">Export Data</button>
+                <button class="btn btn-info sidebar-btn" onclick="showOTDRModal()">Check OTDR</button>
             </div>
         </div>
 
@@ -183,31 +188,67 @@
                     <div class="stages-title">Project Stages Timeline</div>
                     
                     <div class="stage-item">
-                        <div class="stage-label">1. Design</div>
+                        <div class="stage-label">1. Mechanical Design</div>
                         <div class="stage-input-group">
                             <label class="stage-input-label">Person in Charge</label>
-                            <input type="text" id="designPerson" class="stage-input" placeholder="Enter name">
+                            <input type="text" id="mechanicalDesignPerson" class="stage-input" placeholder="Enter name">
                         </div>
                         <div class="stage-input-group">
                             <label class="stage-input-label">Due Date</label>
-                            <input type="date" id="designTime" class="stage-input">
+                            <input type="date" id="mechanicalDesignTime" class="stage-input">
                         </div>
                     </div>
                     
                     <div class="stage-item">
-                        <div class="stage-label">2. Production</div>
+                        <div class="stage-label">2. Electrical Design</div>
                         <div class="stage-input-group">
                             <label class="stage-input-label">Person in Charge</label>
-                            <input type="text" id="productionPerson" class="stage-input" placeholder="Enter name">
+                            <input type="text" id="electricalDesignPerson" class="stage-input" placeholder="Enter name">
                         </div>
                         <div class="stage-input-group">
                             <label class="stage-input-label">Due Date</label>
-                            <input type="date" id="productionTime" class="stage-input">
+                            <input type="date" id="electricalDesignTime" class="stage-input">
                         </div>
                     </div>
                     
                     <div class="stage-item">
-                        <div class="stage-label">3. Controls</div>
+                        <div class="stage-label">3. Manufacturing</div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Person in Charge</label>
+                            <input type="text" id="manufacturingPerson" class="stage-input" placeholder="Enter name">
+                        </div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Due Date</label>
+                            <input type="date" id="manufacturingTime" class="stage-input">
+                        </div>
+                    </div>
+                    
+                    <div class="stage-item">
+                        <div class="stage-label">4. Wiring</div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Person in Charge</label>
+                            <input type="text" id="wiringPerson" class="stage-input" placeholder="Enter name">
+                        </div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Due Date</label>
+                            <input type="date" id="wiringTime" class="stage-input">
+                        </div>
+                    </div>
+                    
+                    <div class="stage-item">
+                        <div class="stage-label">5. Assembly</div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Person in Charge</label>
+                            <input type="text" id="assemblyPerson" class="stage-input" placeholder="Enter name">
+                        </div>
+                        <div class="stage-input-group">
+                            <label class="stage-input-label">Due Date</label>
+                            <input type="date" id="assemblyTime" class="stage-input">
+                        </div>
+                    </div>
+                    
+                    <div class="stage-item">
+                        <div class="stage-label">6. Controls</div>
                         <div class="stage-input-group">
                             <label class="stage-input-label">Person in Charge</label>
                             <input type="text" id="controlsPerson" class="stage-input" placeholder="Enter name">
@@ -219,7 +260,7 @@
                     </div>
                     
                     <div class="stage-item">
-                        <div class="stage-label">4. Ready for Dispatch</div>
+                        <div class="stage-label">7. Ready for Dispatch</div>
                         <div class="stage-input-group">
                             <label class="stage-input-label">Person in Charge</label>
                             <input type="text" id="dispatchPerson" class="stage-input" placeholder="Enter name">
@@ -231,7 +272,7 @@
                     </div>
                     
                     <div class="stage-item">
-                        <div class="stage-label">5. Installation & Commissioning</div>
+                        <div class="stage-label">8. Installation & Commissioning</div>
                         <div class="stage-input-group">
                             <label class="stage-input-label">Person in Charge</label>
                             <input type="text" id="installationPerson" class="stage-input" placeholder="Enter name">
@@ -299,6 +340,19 @@
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeTimelineModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTDR Modal -->
+    <div class="modal" id="otdrModal">
+        <div class="modal-content otdr-modal">
+            <h2>On-Time Delivery Rate (OTDR) by Stage</h2>
+            <div id="otdrContent">
+                <!-- OTDR data will be populated here -->
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeOTDRModal()">Close</button>
             </div>
         </div>
     </div>
