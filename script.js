@@ -597,6 +597,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         const status = document.getElementById('projectStatus').value;
+        const progress = calculateProgress(status, { stages: {} });
 
         const formData = {
             name: document.getElementById('projectName').value,
@@ -886,16 +887,12 @@ async function sendEmailReminder(project, stageName, stage) {
         const emails = await emailResponse.json();
         
         const recipientEmail = emails[stageName];
-        const senderEmail = emails['projects-team'];
         
-        if (recipientEmail && senderEmail) {
-            // In a real application, this would send an actual email
-            console.log(`Email reminder sent:
-From: ${senderEmail}
-To: ${recipientEmail}
-Subject: Project Deadline Reminder - ${project.name}
-
-Dear Team,
+        if (recipientEmail) {
+            const emailData = {
+                to: recipientEmail,
+                subject: `Project Deadline Reminder - ${project.name}`,
+                text: `Dear Team,
 
 This is a reminder that the ${stageName.replace(/-/g, ' ')} stage for project "${project.name}" is due in 5 days.
 
@@ -909,7 +906,40 @@ Project Details:
 Please ensure timely completion.
 
 Best regards,
-Projects Team`);
+Projects Team`,
+                html: `
+                <h3>Project Deadline Reminder</h3>
+                <p>Dear Team,</p>
+                <p>This is a reminder that the <strong>${stageName.replace(/-/g, ' ')}</strong> stage for project "<strong>${project.name}</strong>" is due in 5 days.</p>
+                
+                <h4>Project Details:</h4>
+                <ul>
+                    <li><strong>Project Name:</strong> ${project.name}</li>
+                    <li><strong>Description:</strong> ${project.description}</li>
+                    <li><strong>Stage:</strong> ${stageName.replace(/-/g, ' ').toUpperCase()}</li>
+                    <li><strong>Due Date:</strong> ${stage.dueDate}</li>
+                    <li><strong>Person in Charge:</strong> ${stage.person}</li>
+                </ul>
+                
+                <p>Please ensure timely completion.</p>
+                <p>Best regards,<br>Projects Team</p>
+                `
+            };
+
+            const response = await fetch('/send-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(emailData)
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                console.log(`Email reminder sent successfully to ${recipientEmail}`);
+            } else {
+                console.error('Failed to send email:', result.error);
+            }
         }
     } catch (error) {
         console.error('Error sending email reminder:', error);

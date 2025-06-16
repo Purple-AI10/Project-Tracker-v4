@@ -18,6 +18,10 @@ def script():
 def logo():
     return send_from_directory('.', 'mikro-logo.svg')
 
+@app.route('/image.png')
+def favicon():
+    return send_from_directory('.', 'image.png')
+
 
 if __name__ == '__main__':
     print("Starting Project Tracker server...")
