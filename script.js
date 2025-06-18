@@ -993,8 +993,8 @@ function checkUpcomingDeadlines() {
     const currentHour = now.getHours();
     
     // Only send emails between 9 AM and 10 AM to avoid spam
-    if (currentHour < 9 || currentHour >= 10) {
-        console.log('Email check skipped - outside business hours (9-10 AM)');
+    if (currentHour < 13 || currentHour >= 14 ) {
+        console.log('Email check skipped - outside business hours (1-2 PM)');
         return;
     }
     

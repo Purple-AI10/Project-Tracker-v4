@@ -1,8 +1,16 @@
-
 {
   "stageName": "electrical-design",
-  "projects": [],
-  "totalProjects": 0,
+  "projects": [
+    {
+      "projectId": 1750230529362,
+      "projectName": "PA004",
+      "dueDate": "2025-07-04",
+      "completed": false,
+      "completedDate": null,
+      "onTime": null
+    }
+  ],
+  "totalProjects": 1,
   "onTimeProjects": 0,
-  "otdr": 0
+  "otdr": "0.0"
 }
