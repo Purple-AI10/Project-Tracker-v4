@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(express.static('.'));
 
 // Email configuration - FILL IN YOUR PASSWORD HERE
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
     service: 'gmail', // or your email service
     auth: {
         user: 'projects@mikroindia.com',

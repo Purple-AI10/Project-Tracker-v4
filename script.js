@@ -596,19 +596,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
+        
+        // Validate required fields
+        const name = document.getElementById('projectName').value.trim();
+        const description = document.getElementById('projectDescription').value.trim();
+        const assignee = document.getElementById('projectAssignee').value.trim();
+        const projectType = document.getElementById('projectType').value;
+        const bu = document.getElementById('projectBU').value;
+        
+        if (!name || !description || !assignee || !projectType || !bu) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
         const status = document.getElementById('projectStatus').value;
         const progress = calculateProgress(status, { stages: {} });
 
         const formData = {
-            name: document.getElementById('projectName').value,
-            description: document.getElementById('projectDescription').value,
+            name: name,
+            description: description,
             status: status,
             priority: 'design',
-            assignee: document.getElementById('projectAssignee').value,
+            assignee: assignee,
             progress: progress,
             remarks: document.getElementById('projectRemarks').value || '',
-            projectType: document.getElementById('projectType').value,
-            bu: document.getElementById('projectBU').value,
+            projectType: projectType,
+            bu: bu,
             stages: {
                 'mechanical-design': {
                     person: document.getElementById('mechanicalDesignPerson').value || '',
@@ -685,8 +698,16 @@ document.addEventListener('DOMContentLoaded', function () {
             projects.push(project);
         }
 
-        await upsertProject(project);
-        closeModal();
+        try {
+            await upsertProject(project);
+            closeModal();
+            // Force a refresh of the projects list
+            renderProjects();
+            updateStats();
+        } catch (error) {
+            console.error('Error saving project:', error);
+            alert('Failed to save project. Please try again.');
+        }
     });
 
     // Modal click outside to close
@@ -743,7 +764,7 @@ async function updateOTDRData(projectId, stageName, isCompleted) {
     if (!project || !project.stages[stageName]) return;
     
     try {
-        const response = await fetch(`${stageName}-otdr.json`);
+        const response = await fetch(`otdr-data/${stageName}-otdr.json`);
         let otdrData;
         
         if (response.ok) {
@@ -819,7 +840,7 @@ async function showOTDRModal() {
     
     for (const stageName of stageNames) {
         try {
-            const response = await fetch(`${stageName}-otdr.json`);
+            const response = await fetch(`otdr-data/${stageName}-otdr.json`);
             let otdrData;
             
             if (response.ok) {
@@ -887,6 +908,12 @@ async function sendEmailReminder(project, stageName, stage) {
         const emails = await emailResponse.json();
         
         const recipientEmail = emails[stageName];
+        
+        // Skip sending email for dispatch stage as there's no email configured
+        if (stageName === 'dispatch') {
+            console.log(`Skipping email for dispatch stage - no email configured`);
+            return;
+        }
         
         if (recipientEmail) {
             const emailData = {
