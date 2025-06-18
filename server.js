@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransporter({
     service: 'gmail', // or your email service
     auth: {
         user: 'projects@mikroindia.com',
-        pass: '' // TODO: FILL IN YOUR EMAIL PASSWORD HERE
+        pass: 'uMso7;4A)t{s' // TODO: FILL IN YOUR EMAIL PASSWORD HERE
     }
 });
 
