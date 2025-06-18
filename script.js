@@ -137,6 +137,9 @@ async function updateStageCompletion(projectId, stage, isCompleted) {
         await updateOTDRDataViaBackend(projectId, stage, isCompleted, project);
         
         await upsertProject(project);
+        
+        // Refresh the timeline view immediately
+        showTimeline(projectId);
     }
 }
 
@@ -987,14 +990,14 @@ function closeOTDRModal() {
     document.getElementById('otdrModal').style.display = 'none';
 }
 
-// Check for upcoming deadlines and send email reminders - runs daily at 9 AM
+// Check for upcoming deadlines and send email reminders - runs daily 1-3 PM Indian time
 function checkUpcomingDeadlines() {
     const now = new Date();
     const currentHour = now.getHours();
     
-    // Only send emails between 9 AM and 10 AM to avoid spam
-    if (currentHour < 13 || currentHour >= 14 ) {
-        console.log('Email check skipped - outside business hours (1-2 PM)');
+    // Only send emails between 1 PM and 3 PM Indian time to avoid spam
+    if (currentHour < 13 || currentHour >= 15 ) {
+        console.log('Email check skipped - outside business hours (1-3 PM Indian time)');
         return;
     }
     
@@ -1010,10 +1013,14 @@ function checkUpcomingDeadlines() {
         const inUseStages = getInUseStages(project);
         inUseStages.forEach(stageName => {
             const stage = project.stages[stageName];
-            if (stage && stage.dueDate && !stage.completed) {
+            if (stage && stage.dueDate && !stage.completed && stage.person && stage.person.trim() !== '') {
                 const dueDate = new Date(stage.dueDate);
-                if (dueDate.toDateString() === fiveDaysFromNow.toDateString()) {
-                    console.log(`Sending reminder for project: ${project.name}, stage: ${stageName}`);
+                const timeDiff = dueDate.getTime() - today.getTime();
+                const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                
+                // Send email if exactly 5 days before due date
+                if (daysDiff === 5) {
+                    console.log(`Sending reminder for project: ${project.name}, stage: ${stageName}, due: ${stage.dueDate}`);
                     sendEmailReminder(project, stageName, stage);
                 }
             }
