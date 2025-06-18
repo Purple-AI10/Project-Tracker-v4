@@ -1,9 +1,49 @@
 
-let projects = [];
-let editingId = null;
-let isAdminMode = false;
+/*
+=================================================================
+PROJECT TRACKER - MAIN JAVASCRIPT FILE
+=================================================================
 
-// Real-time Firestore listener for projects collection
+This file contains all client-side logic for the project tracking application.
+
+MAIN COMPONENTS:
+1. Firebase Integration - Real-time database operations
+2. Project Management - CRUD operations for projects
+3. Stage Tracking - Multi-stage project workflow management
+4. OTDR (On-Time Delivery Rate) - Performance tracking
+5. Email Notifications - Automated deadline reminders
+6. Admin Authentication - Role-based access control
+
+GLOBAL VARIABLES:
+- projects: Array holding all project data from Firebase
+- editingId: ID of project currently being edited (null when adding new)
+- isAdminMode: Boolean flag for admin privileges
+
+DEBUGGING TIPS:
+- Check browser console for Firebase connection errors
+- Verify all required HTML elements exist with correct IDs
+- Test admin login with password: 'mikro-admin'
+- Check network tab for failed API calls
+- Ensure Firebase config is correct and project exists
+*/
+
+// ===== GLOBAL STATE VARIABLES =====
+let projects = [];          // Main projects array - holds all project data
+let editingId = null;       // Currently editing project ID (null = new project)
+let isAdminMode = false;    // Admin mode flag - controls edit/delete permissions
+
+// ===== FIREBASE DATABASE OPERATIONS =====
+
+/**
+ * Real-time Firestore listener for projects collection
+ * Sets up live data synchronization with Firebase
+ * Automatically updates UI when database changes occur
+ * 
+ * DEBUGGING: If projects don't load, check:
+ * - Firebase config in index.html
+ * - Network connectivity
+ * - Firestore rules allowing read access
+ */
 function listenForProjects() {
     db.collection("projects").onSnapshot((snapshot) => {
         projects = snapshot.docs.map((doc) => {
@@ -24,7 +64,18 @@ function listenForProjects() {
     });
 }
 
-// Add or update a project in Firestore
+/**
+ * Add or update a project in Firestore database
+ * Handles both new project creation and existing project updates
+ * 
+ * @param {Object} project - Project object with all required fields
+ * 
+ * DEBUGGING: If save fails, check:
+ * - Project object has all required fields
+ * - Firebase write permissions
+ * - Network connectivity
+ * - Project ID is valid string/number
+ */
 async function upsertProject(project) {
     try {
         await db.collection("projects").doc(String(project.id)).set(project);
@@ -48,7 +99,21 @@ async function deleteProject(id) {
     }
 }
 
-// Update stage completion status
+/**
+ * Update stage completion status and OTDR data immediately
+ * Handles toggle switch changes in timeline view
+ * Updates Firebase, recalculates progress, and syncs OTDR data
+ * 
+ * @param {string|number} projectId - Unique project identifier
+ * @param {string} stage - Stage name (e.g., 'mechanical-design')
+ * @param {boolean} isCompleted - New completion status
+ * 
+ * DEBUGGING: If toggle doesn't work, check:
+ * - Admin mode is enabled for write access
+ * - Project exists in database
+ * - Stage name matches expected values
+ * - Network connectivity for OTDR update
+ */
 async function updateStageCompletion(projectId, stage, isCompleted) {
     const project = projects.find(p => p.id == projectId);
     if (project) {
@@ -68,8 +133,8 @@ async function updateStageCompletion(projectId, stage, isCompleted) {
         // Update progress based on status and completed stages
         project.progress = calculateProgress(project.status, project);
         
-        // Update OTDR data
-        await updateOTDRData(projectId, stage, isCompleted);
+        // Update OTDR data in real-time via backend
+        await updateOTDRDataViaBackend(projectId, stage, isCompleted, project);
         
         await upsertProject(project);
     }
@@ -496,7 +561,6 @@ function showTimeline(projectId = null) {
             content.innerHTML = `
                 <div class="project-timeline-header">
                     <h3>${project.name} - Timeline</h3>
-                    <p>Showing only stages with assigned personnel</p>
                 </div>
                 <div class="timeline-stages">
                     ${stagesHTML}
@@ -678,7 +742,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (editingId) {
             const index = projects.findIndex((p) => p.id == editingId);
             if (index !== -1) {
-                project = { ...projects[index], ...formData };
+                const existingProject = projects[index];
+                project = { ...existingProject, ...formData };
+                
+                // Preserve existing stage completion status and timestamps
+                if (existingProject.stages) {
+                    Object.keys(project.stages).forEach(stageName => {
+                        if (existingProject.stages[stageName]) {
+                            project.stages[stageName].completed = existingProject.stages[stageName].completed;
+                            project.stages[stageName].completedTimestamp = existingProject.stages[stageName].completedTimestamp;
+                        }
+                    });
+                }
+                
                 // Set current project stage based on completed toggles
                 project.currentProjectStage = getCurrentProjectStage(project);
                 // Recalculate progress based on new values
@@ -758,7 +834,38 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// OTDR tracking functions
+// Real-time OTDR update via backend
+async function updateOTDRDataViaBackend(projectId, stageName, isCompleted, project) {
+    const stage = project.stages[stageName];
+    if (!stage || !stage.person || stage.person.trim() === '') return;
+    
+    try {
+        const response = await fetch('/update-otdr', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                projectId: projectId,
+                projectName: project.name,
+                stageName: stageName,
+                dueDate: stage.dueDate,
+                completed: isCompleted,
+                completedDate: isCompleted ? new Date().toISOString().split('T')[0] : null
+            })
+        });
+        
+        if (response.ok) {
+            console.log(`OTDR data updated for ${stageName}`);
+        } else {
+            console.error('Failed to update OTDR data');
+        }
+    } catch (error) {
+        console.error('Error updating OTDR data:', error);
+    }
+}
+
+// OTDR tracking functions (legacy - keeping for backup)
 async function updateOTDRData(projectId, stageName, isCompleted) {
     const project = projects.find(p => p.id == projectId);
     if (!project || !project.stages[stageName]) return;
@@ -880,11 +987,22 @@ function closeOTDRModal() {
     document.getElementById('otdrModal').style.display = 'none';
 }
 
-// Check for upcoming deadlines and send email reminders (simulated)
+// Check for upcoming deadlines and send email reminders - runs daily at 9 AM
 function checkUpcomingDeadlines() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Only send emails between 9 AM and 10 AM to avoid spam
+    if (currentHour < 9 || currentHour >= 10) {
+        console.log('Email check skipped - outside business hours (9-10 AM)');
+        return;
+    }
+    
     const today = new Date();
     const fiveDaysFromNow = new Date();
     fiveDaysFromNow.setDate(today.getDate() + 5);
+    
+    console.log(`Checking deadlines at ${now.toLocaleString()} for due date: ${fiveDaysFromNow.toDateString()}`);
     
     projects.forEach(project => {
         if (!project.stages) return;
@@ -895,6 +1013,7 @@ function checkUpcomingDeadlines() {
             if (stage && stage.dueDate && !stage.completed) {
                 const dueDate = new Date(stage.dueDate);
                 if (dueDate.toDateString() === fiveDaysFromNow.toDateString()) {
+                    console.log(`Sending reminder for project: ${project.name}, stage: ${stageName}`);
                     sendEmailReminder(project, stageName, stage);
                 }
             }
@@ -973,8 +1092,8 @@ Projects Team`,
     }
 }
 
-// Run deadline check on page load and every hour
-setInterval(checkUpcomingDeadlines, 3600000); // Check every hour
+// Run deadline check on page load and every hour (will only send emails at 9 AM)
+setInterval(checkUpcomingDeadlines, 3600000); // Check every hour, but emails only sent 9-10 AM
 
 // Make functions available globally for onclick handlers
 window.openModal = openModal;
