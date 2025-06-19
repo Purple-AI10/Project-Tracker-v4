@@ -31,23 +31,49 @@ DEBUGGING TIPS:
 let projects = [];          // Main projects array - holds all project data
 let editingId = null;       // Currently editing project ID (null = new project)
 let isAdminMode = false;    // Admin mode flag - controls edit/delete permissions
+let currentUser = null;     // Current authenticated user
 
 // ===== FIREBASE DATABASE OPERATIONS =====
 
 /**
- * Real-time Firestore listener for projects collection
- * Sets up live data synchronization with Firebase
+ * Real-time Supabase listener for projects table
+ * Sets up live data synchronization with Supabase
  * Automatically updates UI when database changes occur
  * 
  * DEBUGGING: If projects don't load, check:
- * - Firebase config in index.html
+ * - Supabase config in index.html
  * - Network connectivity
- * - Firestore rules allowing read access
+ * - Supabase table permissions
  */
-function listenForProjects() {
-    db.collection("projects").onSnapshot((snapshot) => {
-        projects = snapshot.docs.map((doc) => {
-            const project = { ...doc.data(), id: doc.id };
+async function listenForProjects() {
+    // Initial load
+    await loadProjects();
+    
+    // Set up real-time subscription
+    supabase
+        .channel('projects')
+        .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'projects' }, 
+            (payload) => {
+                console.log('Change received!', payload);
+                loadProjects(); // Reload projects when changes occur
+            }
+        )
+        .subscribe();
+}
+
+async function loadProjects() {
+    try {
+        const { data, error } = await supabase
+            .from('projects')
+            .select('*');
+        
+        if (error) {
+            console.error('Error loading projects:', error);
+            return;
+        }
+        
+        projects = data.map(project => {
             // Ensure current project stage is set for existing projects
             if (!project.currentProjectStage) {
                 project.currentProjectStage = getCurrentProjectStage(project);
@@ -59,26 +85,36 @@ function listenForProjects() {
             }
             return project;
         });
+        
         renderProjects();
         updateStats();
-    });
+    } catch (error) {
+        console.error('Error in loadProjects:', error);
+    }
 }
 
 /**
- * Add or update a project in Firestore database
+ * Add or update a project in Supabase database
  * Handles both new project creation and existing project updates
  * 
  * @param {Object} project - Project object with all required fields
  * 
  * DEBUGGING: If save fails, check:
  * - Project object has all required fields
- * - Firebase write permissions
+ * - Supabase write permissions
  * - Network connectivity
  * - Project ID is valid string/number
  */
 async function upsertProject(project) {
     try {
-        await db.collection("projects").doc(String(project.id)).set(project);
+        const { data, error } = await supabase
+            .from('projects')
+            .upsert(project, { onConflict: 'id' });
+        
+        if (error) {
+            console.error('Error saving project:', error);
+            alert("Failed to save project: " + error.message);
+        }
     }
     catch (error) {
         console.error('Error saving project:', error);
@@ -86,11 +122,19 @@ async function upsertProject(project) {
     }
 }
 
-// Delete a project in Firestore
+// Delete a project in Supabase
 async function deleteProject(id) {
     if (confirm('Are you sure you want to delete this project?')) {
         try {
-            await db.collection("projects").doc(String(id)).delete();
+            const { error } = await supabase
+                .from('projects')
+                .delete()
+                .eq('id', id);
+            
+            if (error) {
+                console.error('Error deleting project:', error);
+                alert("Failed to delete project: " + error.message);
+            }
         }
         catch (error) {
             console.error('Error deleting project:', error);
@@ -289,7 +333,7 @@ function getFilteredProjects() {
         const matchesStatus = !statusFilter || project.status === statusFilter;
         const matchesPriority = !priorityFilter || project.priority === priorityFilter;
         const matchesProjectType = !projectTypeFilter || project.projectType === projectTypeFilter;
-        const matchesBU = !buFilter || buFilter === 'all' || project.bu === buFilter;
+        const matchesBU = !buFilter || buFilter === 'other' || project.bu === buFilter;
         const matchesSearch = !searchTerm ||
             project.name.toLowerCase().includes(searchTerm) ||
             project.description.toLowerCase().includes(searchTerm) ||
@@ -656,10 +700,108 @@ function toggleSidebar() {
     mainContent.classList.toggle('sidebar-collapsed');
 }
 
+// Authentication functions
+async function signInWithGoogle() {
+    try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin
+            }
+        });
+        
+        if (error) {
+            console.error('Error signing in:', error);
+            showLoginError('Failed to sign in. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error in signInWithGoogle:', error);
+        showLoginError('Failed to sign in. Please try again.');
+    }
+}
+
+async function signOut() {
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            console.error('Error signing out:', error);
+        }
+        showLoginScreen();
+    } catch (error) {
+        console.error('Error in signOut:', error);
+    }
+}
+
+function showLoginScreen() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+}
+
+function showMainApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+}
+
+function showLoginError(message) {
+    const errorDiv = document.getElementById('loginError');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function hideLoginError() {
+    document.getElementById('loginError').style.display = 'none';
+}
+
+// Check authentication state
+async function checkAuthState() {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session && session.user) {
+        const email = session.user.email;
+        
+        if (isEmailAllowed(email)) {
+            currentUser = session.user;
+            showMainApp();
+            hideLoginError();
+            // Initialize app after successful authentication
+            listenForProjects();
+            checkUpcomingDeadlines();
+        } else {
+            showLoginError('Access denied. Only @mikroindia.com email addresses and authorized accounts are allowed.');
+            await signOut();
+        }
+    } else {
+        showLoginScreen();
+    }
+}
+
 // Form submission handler and modal logic
 document.addEventListener('DOMContentLoaded', function () {
-    listenForProjects();
-    checkUpcomingDeadlines(); // Check for upcoming deadlines on page load
+    // Set up authentication
+    checkAuthState();
+    
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+            const email = session.user.email;
+            if (isEmailAllowed(email)) {
+                currentUser = session.user;
+                showMainApp();
+                hideLoginError();
+                listenForProjects();
+                checkUpcomingDeadlines();
+            } else {
+                showLoginError('Access denied. Only @mikroindia.com email addresses and authorized accounts are allowed.');
+                signOut();
+            }
+        } else if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            showLoginScreen();
+        }
+    });
+    
+    // Google sign in button
+    document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
 
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -995,6 +1137,11 @@ function checkUpcomingDeadlines() {
     const now = new Date();
     const currentHour = now.getHours();
     
+    // Check if it's March 31st and reset OTDR data
+    if (now.getMonth() === 2 && now.getDate() === 31) { // March is month 2 (0-indexed)
+        resetOTDRAnnually();
+    }
+    
     // Only send emails between 1 PM and 3 PM Indian time to avoid spam
     if (currentHour < 13 || currentHour >= 15 ) {
         console.log('Email check skipped - outside business hours (1-3 PM Indian time)');
@@ -1099,6 +1246,44 @@ Projects Team`,
     }
 }
 
+// Reset OTDR data annually on March 31st
+async function resetOTDRAnnually() {
+    const stageNames = ['mechanical-design', 'electrical-design', 'manufacturing', 'wiring', 'assembly', 'controls', 'dispatch', 'installation'];
+    
+    console.log('Resetting OTDR data for new fiscal year...');
+    
+    for (const stageName of stageNames) {
+        try {
+            const resetData = {
+                stageName: stageName,
+                projects: [],
+                totalProjects: 0,
+                onTimeProjects: 0,
+                otdr: 0
+            };
+            
+            const response = await fetch('/reset-otdr', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    stageName: stageName,
+                    data: resetData
+                })
+            });
+            
+            if (response.ok) {
+                console.log(`OTDR data reset for ${stageName}`);
+            } else {
+                console.error(`Failed to reset OTDR data for ${stageName}`);
+            }
+        } catch (error) {
+            console.error(`Error resetting OTDR data for ${stageName}:`, error);
+        }
+    }
+}
+
 // Run deadline check on page load and every hour (will only send emails at 9 AM)
 setInterval(checkUpcomingDeadlines, 3600000); // Check every hour, but emails only sent 9-10 AM
 
@@ -1121,3 +1306,4 @@ window.closeTimelineModal = closeTimelineModal;
 window.updateStageCompletion = updateStageCompletion;
 window.showOTDRModal = showOTDRModal;
 window.closeOTDRModal = closeOTDRModal;
+window.signOut = signOut;

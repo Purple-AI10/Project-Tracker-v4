@@ -105,6 +105,21 @@ app.post('/update-otdr', async (req, res) => {
     }
 });
 
+// OTDR reset endpoint
+app.post('/reset-otdr', async (req, res) => {
+    try {
+        const { stageName, data } = req.body;
+        const filePath = path.join(__dirname, 'otdr-data', `${stageName}-otdr.json`);
+        
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error resetting OTDR data:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Serve static files
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));

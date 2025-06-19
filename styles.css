@@ -226,6 +226,71 @@ body {
     color: #6c757d;
 }
 
+/* Login Screen Styles */
+.login-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-container {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.login-header {
+    margin-bottom: 30px;
+}
+
+.login-logo {
+    height: 60px;
+    margin-bottom: 20px;
+}
+
+.login-header h1 {
+    color: #423A8E;
+    margin: 0 0 10px 0;
+    font-size: 2rem;
+}
+
+.login-header p {
+    color: #666;
+    margin: 0;
+}
+
+.google-signin-btn {
+    background: #4285f4;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    width: 100%;
+}
+
+.google-signin-btn:hover {
+    background: #357ae8;
+}
+
+.login-error {
+    background: #fee;
+    color: #c33;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 15px;
+    border: 1px solid #fcc;
+}
+
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
