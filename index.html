@@ -106,7 +106,10 @@
                     <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
                     <h1 class="header-title">Project Tracker</h1>
                 </div>
-                <button id="adminLoginBtn" class="btn admin-login-btn" onclick="showAdminLogin()">Admin Login</button>
+                <div class="header-right">
+                    <button id="adminLoginBtn" class="btn admin-login-btn" onclick="showAdminLogin()">Admin Login</button>
+                    <button class="btn btn-secondary" onclick="signOut()">Sign Out</button>
+                </div>
             </div>
 
             <div class="stats-grid">
@@ -132,6 +135,7 @@
                 <!-- Projects will be dynamically added here -->
             </div>
         </div>
+    </div>
     </div>
 
     <!-- Modal for adding/editing projects -->

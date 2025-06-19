@@ -752,6 +752,11 @@ function hideLoginError() {
     document.getElementById('loginError').style.display = 'none';
 }
 
+// Check if email is allowed
+function isEmailAllowed(email) {
+    return email.endsWith('@mikroindia.com') || email === 'vaidehi.pawar1997@gmail.com';
+}
+
 // Check authentication state
 async function checkAuthState() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -806,10 +811,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         
-        // Validate required fields
-        const name = document.getElementById('projectName').value.trim();
-        const description = document.getElementById('projectDescription').value.trim();
-        const assignee = document.getElementById('projectAssignee').value.trim();
+        // Validate required fields and convert to uppercase
+        const name = document.getElementById('projectName').value.trim().toUpperCase();
+        const description = document.getElementById('projectDescription').value.trim().toUpperCase();
+        const assignee = document.getElementById('projectAssignee').value.trim().toUpperCase();
         const projectType = document.getElementById('projectType').value;
         const bu = document.getElementById('projectBU').value;
         
@@ -828,54 +833,54 @@ document.addEventListener('DOMContentLoaded', function () {
             priority: 'design',
             assignee: assignee,
             progress: progress,
-            remarks: document.getElementById('projectRemarks').value || '',
+            remarks: document.getElementById('projectRemarks').value.toUpperCase() || '',
             projectType: projectType,
             bu: bu,
             stages: {
                 'mechanical-design': {
-                    person: document.getElementById('mechanicalDesignPerson').value || '',
+                    person: document.getElementById('mechanicalDesignPerson').value.toUpperCase() || '',
                     dueDate: document.getElementById('mechanicalDesignTime').value || '',
                     completed: false,
                     completedTimestamp: 'Yet to be completed'
                 },
                 'electrical-design': {
-                    person: document.getElementById('electricalDesignPerson').value || '',
+                    person: document.getElementById('electricalDesignPerson').value.toUpperCase() || '',
                     dueDate: document.getElementById('electricalDesignTime').value || '',
                     completed: false,
                     completedTimestamp: 'Yet to be completed'
                 },
                 'manufacturing': {
-                    person: document.getElementById('manufacturingPerson').value || '',
+                    person: document.getElementById('manufacturingPerson').value.toUpperCase() || '',
                     dueDate: document.getElementById('manufacturingTime').value || '',
                     completed: false,
                     completedTimestamp: 'Yet to be completed'
                 },
                 'wiring': {
-                    person: document.getElementById('wiringPerson').value || '',
+                    person: document.getElementById('wiringPerson').value.toUpperCase() || '',
                     dueDate: document.getElementById('wiringTime').value || '',
                     completed: false,
                     completedTimestamp: 'Yet to be completed'
                 },
                 'assembly': {
-                    person: document.getElementById('assemblyPerson').value || '',
+                    person: document.getElementById('assemblyPerson').value.toUpperCase() || '',
                     dueDate: document.getElementById('assemblyTime').value || '',
                     completed: false,
                     completedTimestamp: 'Yet to be completed'
                 },
                 'controls': {
-                    person: document.getElementById('controlsPerson').value || '',
+                    person: document.getElementById('controlsPerson').value.toUpperCase() || '',
                     dueDate: document.getElementById('controlsTime').value || '',
                     completed: false,
                     completedTimestamp: 'Yet to be completed'
                 },
                 'dispatch': {
-                    person: document.getElementById('dispatchPerson').value || '',
+                    person: document.getElementById('dispatchPerson').value.toUpperCase() || '',
                     dueDate: document.getElementById('dispatchTime').value || '',
                     completed: false,
                     completedTimestamp: 'Yet to be completed'
                 },
                 'installation': {
-                    person: document.getElementById('installationPerson').value || '',
+                    person: document.getElementById('installationPerson').value.toUpperCase() || '',
                     dueDate: document.getElementById('installationTime').value || '',
                     completed: false,
                     completedTimestamp: 'Yet to be completed'
