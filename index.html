@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,27 +8,36 @@
     <link rel="icon" type="image/png" href="image.png">
     <link rel="shortcut icon" type="image/png" href="image.png">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
-    // Your Firebase configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyDPg5IHycMiGZUhwkb50LIPriSWoAZj4ng",
-        authDomain: "project-tracker-aa616.firebaseapp.com",
-        databaseURL: "https://project-tracker-aa616-default-rtdb.firebaseio.com",
-        projectId: "project-tracker-aa616",
-        storageBucket: "project-tracker-aa616.appspot.com", // Corrected typo
-        messagingSenderId: "177135358125",
-        appId: "1:177135358125:web:4f2c6f6105c9a4361ef624",
-        measurementId: "G-6PG07GTV45"
-    };
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    // Supabase configuration
+    const supabaseUrl = 'https://ufjksbrgrywtqwzhvvzt.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmamtzYnJncnl3dHF3emh2dnp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NjIyMDMsImV4cCI6MjA2NTIzODIwM30.nrqTn-1ectbnnJnOZvLFjOX5t4gSkG68SDQ59C_5ZiU';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
     </script>
 </head>
 <body>
-    <div class="layout-container">
+    <!-- Employee Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-modal">
+            <div class="login-header">
+                <img src="mikro-logo.svg" alt="Mikro Logo" class="login-logo">
+                <h1>Project Tracker</h1>
+                <p>Enter your Employee ID to access the system</p>
+            </div>
+            <form id="employeeLoginForm">
+                <div class="form-group">
+                    <label for="employeeId">Employee ID</label>
+                    <input type="text" id="employeeId" placeholder="Enter your Employee ID (e.g., M20052)" required>
+                </div>
+                <button type="submit" class="employee-signin-btn">Sign In</button>
+            </form>
+            <div id="loginError" class="login-error" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" class="layout-container" style="display: none;">
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <img src="mikro-logo.svg" alt="Mikro Logo" class="sidebar-logo">
@@ -107,8 +117,8 @@
                     <h1 class="header-title">Project Tracker</h1>
                 </div>
                 <div class="header-right">
+                    <span id="userInfo" class="user-info"></span>
                     <button id="adminLoginBtn" class="btn admin-login-btn" onclick="showAdminLogin()">Admin Login</button>
-                    <button class="btn btn-secondary" onclick="signOut()">Sign Out</button>
                 </div>
             </div>
 
@@ -135,7 +145,6 @@
                 <!-- Projects will be dynamically added here -->
             </div>
         </div>
-    </div>
     </div>
 
     <!-- Modal for adding/editing projects -->
@@ -302,7 +311,7 @@
     <!-- Timeline Modal -->
     <div class="modal" id="timelineModal">
         <div class="modal-content timeline-modal">
-            <h2>Project Stages Timeline</h2>
+            <h2></h2>
             <div id="timelineContent">
                 <div class="timeline-stages">
                     <div class="timeline-stage">

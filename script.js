@@ -7,33 +7,129 @@ PROJECT TRACKER - MAIN JAVASCRIPT FILE
 This file contains all client-side logic for the project tracking application.
 
 MAIN COMPONENTS:
-1. Firebase Integration - Real-time database operations
-2. Project Management - CRUD operations for projects
-3. Stage Tracking - Multi-stage project workflow management
-4. OTDR (On-Time Delivery Rate) - Performance tracking
-5. Email Notifications - Automated deadline reminders
-6. Admin Authentication - Role-based access control
+1. Supabase Integration - Real-time database operations
+2. Employee Authentication - Simple ID-based login system
+3. Project Management - CRUD operations for projects
+4. Stage Tracking - Multi-stage project workflow management
+5. OTDR (On-Time Delivery Rate) - Performance tracking
+6. Email Notifications - Automated deadline reminders
+7. Admin Authentication - Role-based access control
 
 GLOBAL VARIABLES:
-- projects: Array holding all project data from Firebase
+- projects: Array holding all project data from Supabase
 - editingId: ID of project currently being edited (null when adding new)
 - isAdminMode: Boolean flag for admin privileges
+- currentUser: Current authenticated employee
 
 DEBUGGING TIPS:
-- Check browser console for Firebase connection errors
+- Check browser console for Supabase connection errors
 - Verify all required HTML elements exist with correct IDs
 - Test admin login with password: 'mikro-admin'
 - Check network tab for failed API calls
-- Ensure Firebase config is correct and project exists
+- Ensure Supabase config is correct and project exists
 */
 
 // ===== GLOBAL STATE VARIABLES =====
 let projects = [];          // Main projects array - holds all project data
 let editingId = null;       // Currently editing project ID (null = new project)
 let isAdminMode = false;    // Admin mode flag - controls edit/delete permissions
-let currentUser = null;     // Current authenticated user
+let currentUser = null;     // Current authenticated employee
+let authData = {};          // Employee authentication data
 
-// ===== FIREBASE DATABASE OPERATIONS =====
+// ===== EMPLOYEE AUTHENTICATION SYSTEM =====
+
+/**
+ * Load employee authentication data from auth_ids.json
+ * Sets up the employee ID to name mapping for login validation
+ */
+async function loadAuthData() {
+    try {
+        const response = await fetch('auth_ids.json');
+        authData = await response.json();
+        console.log('Employee authentication data loaded');
+    } catch (error) {
+        console.error('Error loading authentication data:', error);
+    }
+}
+
+/**
+ * Validate employee login credentials
+ * Checks if the entered employee ID exists in auth_ids.json
+ * 
+ * @param {string} employeeId - Employee ID entered by user
+ * @returns {Object|null} Employee data if valid, null if invalid
+ */
+function validateEmployee(employeeId) {
+    const normalizedId = employeeId.toUpperCase().trim();
+    if (authData[normalizedId]) {
+        return {
+            id: normalizedId,
+            name: authData[normalizedId]
+        };
+    }
+    return null;
+}
+
+/**
+ * Handle employee login form submission
+ * Validates credentials and shows main app if successful
+ */
+function handleEmployeeLogin(event) {
+    event.preventDefault();
+    const employeeId = document.getElementById('employeeId').value;
+    const employee = validateEmployee(employeeId);
+    
+    if (employee) {
+        currentUser = employee;
+        showMainApp();
+        hideLoginError();
+        // Update user info display
+        document.getElementById('userInfo').textContent = `Welcome, ${employee.name}`;
+        // Initialize app after successful authentication
+        listenForProjects();
+        checkUpcomingDeadlines();
+    } else {
+        showLoginError('Invalid Employee ID. Please check and try again.');
+    }
+}
+
+/**
+ * Show the main application interface
+ * Hides login screen and displays the project tracker
+ */
+function showMainApp() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+}
+
+/**
+ * Show the employee login screen
+ * Displays login modal and hides main app
+ */
+function showLoginScreen() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('employeeId').value = '';
+}
+
+/**
+ * Display login error message
+ * @param {string} message - Error message to display
+ */
+function showLoginError(message) {
+    const errorDiv = document.getElementById('loginError');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+/**
+ * Hide login error message
+ */
+function hideLoginError() {
+    document.getElementById('loginError').style.display = 'none';
+}
+
+// ===== SUPABASE DATABASE OPERATIONS =====
 
 /**
  * Real-time Supabase listener for projects table
@@ -62,11 +158,17 @@ async function listenForProjects() {
         .subscribe();
 }
 
+/**
+ * Load all projects from Supabase database
+ * Fetches project data and updates local projects array
+ * Handles data normalization and progress calculation
+ */
 async function loadProjects() {
     try {
         const { data, error } = await supabase
             .from('projects')
-            .select('*');
+            .select('*')
+            .order('createdat', { ascending: false });
         
         if (error) {
             console.error('Error loading projects:', error);
@@ -75,8 +177,8 @@ async function loadProjects() {
         
         projects = data.map(project => {
             // Ensure current project stage is set for existing projects
-            if (!project.currentProjectStage) {
-                project.currentProjectStage = getCurrentProjectStage(project);
+            if (!project.currentprojectstage) {
+                project.currentprojectstage = getCurrentProjectStage(project);
             }
             // Recalculate progress if needed
             const newProgress = calculateProgress(project.status, project);
@@ -107,13 +209,32 @@ async function loadProjects() {
  */
 async function upsertProject(project) {
     try {
+        // Convert camelCase to snake_case for Supabase
+        const dbProject = {
+            id: project.id,
+            name: project.name,
+            description: project.description,
+            status: project.status,
+            priority: project.priority,
+            assignee: project.assignee,
+            progress: project.progress,
+            remarks: project.remarks,
+            projecttype: project.projectType,
+            bu: project.bu,
+            stages: project.stages,
+            currentprojectstage: project.currentProjectStage,
+            createdat: project.createdAt || new Date().toISOString()
+        };
+
         const { data, error } = await supabase
             .from('projects')
-            .upsert(project, { onConflict: 'id' });
+            .upsert(dbProject, { onConflict: 'id' });
         
         if (error) {
             console.error('Error saving project:', error);
             alert("Failed to save project: " + error.message);
+        } else {
+            console.log('Project saved successfully');
         }
     }
     catch (error) {
@@ -122,7 +243,10 @@ async function upsertProject(project) {
     }
 }
 
-// Delete a project in Supabase
+/**
+ * Delete a project from Supabase database
+ * @param {string|number} id - Project ID to delete
+ */
 async function deleteProject(id) {
     if (confirm('Are you sure you want to delete this project?')) {
         try {
@@ -146,7 +270,7 @@ async function deleteProject(id) {
 /**
  * Update stage completion status and OTDR data immediately
  * Handles toggle switch changes in timeline view
- * Updates Firebase, recalculates progress, and syncs OTDR data
+ * Updates Supabase, recalculates progress, and syncs OTDR data
  * 
  * @param {string|number} projectId - Unique project identifier
  * @param {string} stage - Stage name (e.g., 'mechanical-design')
@@ -264,7 +388,9 @@ function renderProjects() {
     
     // Sort projects by creation date (newest first)
     const sortedProjects = filteredProjects.sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        const dateA = new Date(a.createdat || a.createdAt);
+        const dateB = new Date(b.createdat || b.createdAt);
+        return dateB.getTime() - dateA.getTime();
     });
 
     grid.innerHTML = '';
@@ -278,7 +404,7 @@ function createProjectCard(project) {
     const card = document.createElement('div');
     card.className = `project-card priority-${project.priority} fade-in`;
 
-    const currentStage = project.currentProjectStage || 'design';
+    const currentStage = project.currentProjectStage || project.currentprojectstage || 'design';
     const currentDueDate = getCurrentDueDate(project);
     
     card.innerHTML = `
@@ -330,9 +456,10 @@ function getFilteredProjects() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
     return projects.filter((project) => {
+        const projectType = project.projecttype || project.projectType;
         const matchesStatus = !statusFilter || project.status === statusFilter;
         const matchesPriority = !priorityFilter || project.priority === priorityFilter;
-        const matchesProjectType = !projectTypeFilter || project.projectType === projectTypeFilter;
+        const matchesProjectType = !projectTypeFilter || projectType === projectTypeFilter;
         const matchesBU = !buFilter || buFilter === 'other' || project.bu === buFilter;
         const matchesSearch = !searchTerm ||
             project.name.toLowerCase().includes(searchTerm) ||
@@ -389,7 +516,7 @@ function openModal(project = null) {
         document.getElementById('projectStatus').value = project.status;
         document.getElementById('projectAssignee').value = project.assignee;
         document.getElementById('projectRemarks').value = project.remarks || '';
-        document.getElementById('projectType').value = project.projectType || '';
+        document.getElementById('projectType').value = project.projecttype || project.projectType || '';
         document.getElementById('projectBU').value = project.bu || '';
         
         // Populate stage fields if they exist
@@ -511,9 +638,9 @@ function exportData() {
             `"${project.assignee.replace(/"/g, '""')}"`,
             project.progress,
             `"${(project.remarks || '').replace(/"/g, '""')}"`,
-            project.projectType || '',
+            project.projecttype || project.projectType || '',
             project.bu || '',
-            project.createdAt
+            project.createdat || project.createdAt
         ].join(','))
     ];
 
@@ -552,33 +679,6 @@ function logoutAdmin() {
     adminBtn.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
     adminBtn.onclick = showAdminLogin;
     renderProjects();
-}
-
-function loadSampleData() {
-    if (projects.length === 0) {
-        const sampleProjects = [
-            {
-                id: Date.now() + 1,
-                name: "E-commerce Platform Redesign",
-                description: "Complete overhaul of the existing e-commerce platform with modern UI/UX",
-                status: "active",
-                priority: "production",
-                assignee: "Sarah Johnson",
-                progress: 20,
-                remarks: "UI mockups completed, backend integration in progress",
-                projectType: "p-new",
-                bu: "global",
-                createdAt: new Date().toISOString(),
-                stages: {
-                    design: { person: 'John Doe', dueDate: '2025-02-15', completed: false, completedTimestamp: 'Yet to be completed' },
-                    production: { person: 'Jane Smith', dueDate: '2025-03-01', completed: false, completedTimestamp: 'Yet to be completed' }
-                }
-            }
-        ];
-        sampleProjects.forEach(async (p) => {
-            await upsertProject(p);
-        });
-    }
 }
 
 function showTimeline(projectId = null) {
@@ -700,113 +800,15 @@ function toggleSidebar() {
     mainContent.classList.toggle('sidebar-collapsed');
 }
 
-// Authentication functions
-async function signInWithGoogle() {
-    try {
-        const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin
-            }
-        });
-        
-        if (error) {
-            console.error('Error signing in:', error);
-            showLoginError('Failed to sign in. Please try again.');
-        }
-    } catch (error) {
-        console.error('Error in signInWithGoogle:', error);
-        showLoginError('Failed to sign in. Please try again.');
-    }
-}
-
-async function signOut() {
-    try {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            console.error('Error signing out:', error);
-        }
-        showLoginScreen();
-    } catch (error) {
-        console.error('Error in signOut:', error);
-    }
-}
-
-function showLoginScreen() {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
-}
-
-function showMainApp() {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-}
-
-function showLoginError(message) {
-    const errorDiv = document.getElementById('loginError');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-}
-
-function hideLoginError() {
-    document.getElementById('loginError').style.display = 'none';
-}
-
-// Check if email is allowed
-function isEmailAllowed(email) {
-    return email.endsWith('@mikroindia.com') || email === 'vaidehi.pawar1997@gmail.com';
-}
-
-// Check authentication state
-async function checkAuthState() {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session && session.user) {
-        const email = session.user.email;
-        
-        if (isEmailAllowed(email)) {
-            currentUser = session.user;
-            showMainApp();
-            hideLoginError();
-            // Initialize app after successful authentication
-            listenForProjects();
-            checkUpcomingDeadlines();
-        } else {
-            showLoginError('Access denied. Only @mikroindia.com email addresses and authorized accounts are allowed.');
-            await signOut();
-        }
-    } else {
-        showLoginScreen();
-    }
-}
-
 // Form submission handler and modal logic
 document.addEventListener('DOMContentLoaded', function () {
-    // Set up authentication
-    checkAuthState();
-    
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-            const email = session.user.email;
-            if (isEmailAllowed(email)) {
-                currentUser = session.user;
-                showMainApp();
-                hideLoginError();
-                listenForProjects();
-                checkUpcomingDeadlines();
-            } else {
-                showLoginError('Access denied. Only @mikroindia.com email addresses and authorized accounts are allowed.');
-                signOut();
-            }
-        } else if (event === 'SIGNED_OUT') {
-            currentUser = null;
-            showLoginScreen();
-        }
+    // Load authentication data and show login screen
+    loadAuthData().then(() => {
+        showLoginScreen();
     });
     
-    // Google sign in button
-    document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
+    // Employee login form submission
+    document.getElementById('employeeLoginForm').addEventListener('submit', handleEmployeeLogin);
 
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -1010,68 +1012,6 @@ async function updateOTDRDataViaBackend(projectId, stageName, isCompleted, proje
         } else {
             console.error('Failed to update OTDR data');
         }
-    } catch (error) {
-        console.error('Error updating OTDR data:', error);
-    }
-}
-
-// OTDR tracking functions (legacy - keeping for backup)
-async function updateOTDRData(projectId, stageName, isCompleted) {
-    const project = projects.find(p => p.id == projectId);
-    if (!project || !project.stages[stageName]) return;
-    
-    try {
-        const response = await fetch(`otdr-data/${stageName}-otdr.json`);
-        let otdrData;
-        
-        if (response.ok) {
-            otdrData = await response.json();
-        } else {
-            otdrData = {
-                stageName: stageName,
-                projects: [],
-                totalProjects: 0,
-                onTimeProjects: 0,
-                otdr: 0
-            };
-        }
-        
-        const stage = project.stages[stageName];
-        const existingProject = otdrData.projects.find(p => p.projectId === projectId);
-        
-        if (!existingProject && stage.person && stage.person.trim() !== '') {
-            // Add new project to OTDR tracking
-            otdrData.projects.push({
-                projectId: projectId,
-                projectName: project.name,
-                dueDate: stage.dueDate,
-                completed: isCompleted,
-                completedDate: isCompleted ? new Date().toISOString().split('T')[0] : null,
-                onTime: null
-            });
-            otdrData.totalProjects++;
-        } else if (existingProject) {
-            // Update existing project
-            existingProject.completed = isCompleted;
-            if (isCompleted) {
-                const completedDate = new Date().toISOString().split('T')[0];
-                existingProject.completedDate = completedDate;
-                existingProject.onTime = new Date(completedDate) <= new Date(existingProject.dueDate);
-                
-                if (existingProject.onTime) {
-                    otdrData.onTimeProjects++;
-                }
-            }
-        }
-        
-        // Recalculate OTDR
-        const completedProjects = otdrData.projects.filter(p => p.completed);
-        otdrData.onTimeProjects = completedProjects.filter(p => p.onTime).length;
-        otdrData.otdr = otdrData.totalProjects > 0 ? (otdrData.onTimeProjects / otdrData.totalProjects * 100).toFixed(1) : 0;
-        
-        // Save updated OTDR data (this would require a backend in a real application)
-        console.log(`Updated OTDR data for ${stageName}:`, otdrData);
-        
     } catch (error) {
         console.error('Error updating OTDR data:', error);
     }
@@ -1289,8 +1229,8 @@ async function resetOTDRAnnually() {
     }
 }
 
-// Run deadline check on page load and every hour (will only send emails at 9 AM)
-setInterval(checkUpcomingDeadlines, 3600000); // Check every hour, but emails only sent 9-10 AM
+// Run deadline check on page load and every hour (will only send emails at 1-3 PM)
+setInterval(checkUpcomingDeadlines, 3600000); // Check every hour, but emails only sent 1-3 PM
 
 // Make functions available globally for onclick handlers
 window.openModal = openModal;
@@ -1311,4 +1251,3 @@ window.closeTimelineModal = closeTimelineModal;
 window.updateStageCompletion = updateStageCompletion;
 window.showOTDRModal = showOTDRModal;
 window.closeOTDRModal = closeOTDRModal;
-window.signOut = signOut;
