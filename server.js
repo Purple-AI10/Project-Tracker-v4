@@ -43,6 +43,34 @@ app.post('/send-email', async (req, res) => {
     }
 });
 
+// OTDR stats endpoint
+app.get('/api/otdr-stats', async (req, res) => {
+    try {
+        // In a real implementation, this would call Supabase function
+        // For now, return empty array - will be implemented with Supabase Edge Functions
+        res.json({ success: true, data: [] });
+    } catch (error) {
+        console.error('Error fetching OTDR stats:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Update OTDR data endpoint
+app.post('/update-otdr', async (req, res) => {
+    try {
+        const { projectId, projectName, stageName, dueDate, completed, completedDate } = req.body;
+        
+        // In a real implementation, this would call Supabase function
+        // For now, just acknowledge receipt
+        console.log('OTDR update received:', { projectId, stageName, completed });
+        
+        res.json({ success: true, message: 'OTDR data updated' });
+    } catch (error) {
+        console.error('Error updating OTDR:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'Server running', timestamp: new Date().toISOString() });

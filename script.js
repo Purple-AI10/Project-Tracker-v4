@@ -38,35 +38,44 @@ let authData = {};          // Employee authentication data
 // ===== EMPLOYEE AUTHENTICATION SYSTEM =====
 
 /**
- * Load employee authentication data from auth_ids.json
+ * Load employee authentication data from Supabase or fallback to JSON
  * Sets up the employee ID to name mapping for login validation
  */
 async function loadAuthData() {
     try {
-        // Load from Supabase employees table
-        const { data: employees, error } = await supabase
-            .from('employees')
-            .select('employee_id, name');
+        // Check if Supabase is available
+        if (typeof supabase !== 'undefined') {
+            const { data: employees, error } = await supabase
+                .from('employees')
+                .select('employee_id, name');
 
-        if (error) {
-            console.error('Error loading employee data from Supabase:', error);
-            // Fallback to JSON file
-            const response = await fetch('auth_ids.json');
-            const employeeData = await response.json();
-            console.log('Employee authentication data loaded from JSON fallback');
-            return employeeData;
+            if (!error && employees && employees.length > 0) {
+                // Convert array to object for compatibility
+                const employeeData = {};
+                employees.forEach(emp => {
+                    employeeData[emp.employee_id] = emp.name;
+                });
+                
+                authData = employeeData;
+                console.log('Employee authentication data loaded from Supabase');
+                return employeeData;
+            }
         }
 
-        // Convert array to object for compatibility
-        const employeeData = {};
-        employees.forEach(emp => {
-            employeeData[emp.employee_id] = emp.name;
-        });
-
-        console.log('Employee authentication data loaded from Supabase');
+        // Fallback to JSON file
+        const response = await fetch('auth_ids.json');
+        if (!response.ok) {
+            throw new Error('Failed to load auth_ids.json');
+        }
+        
+        const employeeData = await response.json();
+        authData = employeeData;
+        console.log('Employee authentication data loaded from JSON fallback');
         return employeeData;
     } catch (error) {
         console.error('Error loading employee data:', error);
+        // Return empty object to prevent further errors
+        authData = {};
         return {};
     }
 }
@@ -95,13 +104,22 @@ function validateEmployee(employeeId) {
  */
 function handleEmployeeLogin(event) {
     event.preventDefault();
-    const employeeId = document.getElementById('employeeId').value;
+    const employeeIdInput = document.getElementById('employeeId');
+    const employeeId = employeeIdInput.value.trim();
+    
+    if (!employeeId) {
+        showLoginError('Please enter your Employee ID.');
+        return;
+    }
+
     const employee = validateEmployee(employeeId);
 
     if (employee) {
         currentUser = employee;
         showMainApp();
         hideLoginError();
+        // Clear the input
+        employeeIdInput.value = '';
         // Update user info display
         document.getElementById('userInfo').textContent = `Welcome, ${employee.name}`;
         // Initialize app after successful authentication
@@ -109,6 +127,7 @@ function handleEmployeeLogin(event) {
         checkUpcomingDeadlines();
     } else {
         showLoginError('Invalid Employee ID. Please check and try again.');
+        employeeIdInput.focus();
     }
 }
 
@@ -1042,56 +1061,56 @@ async function showOTDRModal() {
     const modal = document.getElementById('otdrModal');
     const content = document.getElementById('otdrContent');
 
-    const stageNames = ['mechanical-design', 'electrical-design', 'manufacturing', 'wiring', 'assembly', 'controls', 'dispatch', 'installation'];
-    const stageLabels = {
-        'mechanical-design': 'Mechanical Design',
-        'electrical-design': 'Electrical Design',
-        'manufacturing': 'Manufacturing', 
-        'wiring': 'Wiring',
-        'assembly': 'Assembly',
-        'controls': 'Controls',
-        'dispatch': 'Ready for Dispatch',
-        'installation': 'Installation & Commissioning'
-    };
+    try {
+        // Fetch OTDR stats from Supabase
+        const response = await fetch('/api/otdr-stats');
+        let otdrData = [];
 
-    let otdrHTML = '<div class="otdr-list">';
-
-    for (const stageName of stageNames) {
-        try {
-            const response = await fetch(`otdr-data/${stageName}-otdr.json`);
-            let otdrData;
-
-            if (response.ok) {
-                otdrData = await response.json();
-            } else {
-                otdrData = { otdr: 0, totalProjects: 0, onTimeProjects: 0 };
-            }
-
-            otdrHTML += `
-                <div class="otdr-item">
-                    <div class="otdr-stage-name">${stageLabels[stageName]}</div>
-                    <div class="otdr-stats">
-                        <span class="otdr-score">${otdrData.otdr}%</span>
-                        <span class="otdr-details">(${otdrData.onTimeProjects}/${otdrData.totalProjects} projects on time)</span>
-                    </div>
-                </div>
-            `;
-        } catch (error) {
-            otdrHTML += `
-                <div class="otdr-item">
-                    <div class="otdr-stage-name">${stageLabels[stageName]}</div>
-                    <div class="otdr-stats">
-                        <span class="otdr-score">0%</span>
-                        <span class="otdr-details">(No data available)</span>
-                    </div>
-                </div>
-            `;
+        if (response.ok) {
+            const result = await response.json();
+            otdrData = result.data || [];
         }
-    }
 
-    otdrHTML += '</div>';
-    content.innerHTML = otdrHTML;
-    modal.style.display = 'flex';
+        const stageLabels = {
+            'mechanical-design': 'Mechanical Design',
+            'electrical-design': 'Electrical Design',
+            'manufacturing': 'Manufacturing', 
+            'wiring': 'Wiring',
+            'assembly': 'Assembly',
+            'controls': 'Controls',
+            'dispatch': 'Ready for Dispatch',
+            'installation': 'Installation & Commissioning'
+        };
+
+        let otdrHTML = '<div class="otdr-list">';
+
+        if (otdrData.length === 0) {
+            otdrHTML += '<div class="otdr-item"><div class="otdr-stage-name">No OTDR data available</div></div>';
+        } else {
+            otdrData.forEach(stage => {
+                const stageName = stage.stage_name;
+                const displayName = stageLabels[stageName] || stageName;
+                
+                otdrHTML += `
+                    <div class="otdr-item">
+                        <div class="otdr-stage-name">${displayName}</div>
+                        <div class="otdr-stats">
+                            <span class="otdr-score">${stage.otdr_percentage || 0}%</span>
+                            <span class="otdr-details">(${stage.on_time_projects || 0}/${stage.total_projects || 0} projects on time)</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        otdrHTML += '</div>';
+        content.innerHTML = otdrHTML;
+        modal.style.display = 'flex';
+    } catch (error) {
+        console.error('Error loading OTDR data:', error);
+        content.innerHTML = '<div class="otdr-list"><div class="otdr-item"><div class="otdr-stage-name">Error loading OTDR data</div></div></div>';
+        modal.style.display = 'flex';
+    }
 }
 
 function closeOTDRModal() {
