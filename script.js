@@ -1,4 +1,3 @@
-
 /*
 =================================================================
 PROJECT TRACKER - MAIN JAVASCRIPT FILE
@@ -44,11 +43,31 @@ let authData = {};          // Employee authentication data
  */
 async function loadAuthData() {
     try {
-        const response = await fetch('auth_ids.json');
-        authData = await response.json();
-        console.log('Employee authentication data loaded');
+        // Load from Supabase employees table
+        const { data: employees, error } = await supabase
+            .from('employees')
+            .select('employee_id, name');
+
+        if (error) {
+            console.error('Error loading employee data from Supabase:', error);
+            // Fallback to JSON file
+            const response = await fetch('auth_ids.json');
+            const employeeData = await response.json();
+            console.log('Employee authentication data loaded from JSON fallback');
+            return employeeData;
+        }
+
+        // Convert array to object for compatibility
+        const employeeData = {};
+        employees.forEach(emp => {
+            employeeData[emp.employee_id] = emp.name;
+        });
+
+        console.log('Employee authentication data loaded from Supabase');
+        return employeeData;
     } catch (error) {
-        console.error('Error loading authentication data:', error);
+        console.error('Error loading employee data:', error);
+        return {};
     }
 }
 
@@ -78,7 +97,7 @@ function handleEmployeeLogin(event) {
     event.preventDefault();
     const employeeId = document.getElementById('employeeId').value;
     const employee = validateEmployee(employeeId);
-    
+
     if (employee) {
         currentUser = employee;
         showMainApp();
@@ -144,7 +163,7 @@ function hideLoginError() {
 async function listenForProjects() {
     // Initial load
     await loadProjects();
-    
+
     // Set up real-time subscription
     supabase
         .channel('projects')
@@ -169,12 +188,12 @@ async function loadProjects() {
             .from('projects')
             .select('*')
             .order('createdat', { ascending: false });
-        
+
         if (error) {
             console.error('Error loading projects:', error);
             return;
         }
-        
+
         projects = data.map(project => {
             // Ensure current project stage is set for existing projects
             if (!project.currentprojectstage) {
@@ -187,7 +206,7 @@ async function loadProjects() {
             }
             return project;
         });
-        
+
         renderProjects();
         updateStats();
     } catch (error) {
@@ -229,7 +248,7 @@ async function upsertProject(project) {
         const { data, error } = await supabase
             .from('projects')
             .upsert(dbProject, { onConflict: 'id' });
-        
+
         if (error) {
             console.error('Error saving project:', error);
             alert("Failed to save project: " + error.message);
@@ -254,7 +273,7 @@ async function deleteProject(id) {
                 .from('projects')
                 .delete()
                 .eq('id', id);
-            
+
             if (error) {
                 console.error('Error deleting project:', error);
                 alert("Failed to delete project: " + error.message);
@@ -291,21 +310,21 @@ async function updateStageCompletion(projectId, stage, isCompleted) {
         if (!project.stages[stage]) {
             project.stages[stage] = {};
         }
-        
+
         project.stages[stage].completed = isCompleted;
         project.stages[stage].completedTimestamp = isCompleted ? new Date().toISOString() : 'Yet to be completed';
-        
+
         // Update current project stage based on completed toggles
         project.currentProjectStage = getCurrentProjectStage(project);
-        
+
         // Update progress based on status and completed stages
         project.progress = calculateProgress(project.status, project);
-        
+
         // Update OTDR data in real-time via backend
         await updateOTDRDataViaBackend(projectId, stage, isCompleted, project);
-        
+
         await upsertProject(project);
-        
+
         // Refresh the timeline view immediately
         showTimeline(projectId);
     }
@@ -314,17 +333,17 @@ async function updateStageCompletion(projectId, stage, isCompleted) {
 // Get in-use project stages (only those with person assigned)
 function getInUseStages(project) {
     if (!project.stages) return [];
-    
+
     const allStages = ['mechanical-design', 'electrical-design', 'manufacturing', 'wiring', 'assembly', 'controls', 'dispatch', 'installation'];
     const inUseStages = [];
-    
+
     allStages.forEach(stageName => {
         const stage = project.stages[stageName];
         if (stage && stage.person && stage.person.trim() !== '') {
             inUseStages.push(stageName);
         }
     });
-    
+
     return inUseStages;
 }
 
@@ -332,7 +351,7 @@ function getInUseStages(project) {
 function getCurrentProjectStage(project) {
     const inUseStages = getInUseStages(project);
     if (inUseStages.length === 0) return 'mechanical-design';
-    
+
     // Find the last completed stage
     let currentStage = inUseStages[0];
     for (let i = 0; i < inUseStages.length; i++) {
@@ -351,14 +370,14 @@ function getCurrentProjectStage(project) {
             break;
         }
     }
-    
+
     return currentStage;
 }
 
 // Get current due date based on current project stage
 function getCurrentDueDate(project) {
     if (!project.stages || !project.currentProjectStage) return 'Not set';
-    
+
     const stage = project.stages[project.currentProjectStage];
     return stage && stage.dueDate ? stage.dueDate : 'Not set';
 }
@@ -373,7 +392,7 @@ function isStageOverdue(stage) {
 function getOverdueProjects() {
     return projects.filter(project => {
         if (!project.stages) return false;
-        
+
         const inUseStages = getInUseStages(project);
         return inUseStages.some(stageName => {
             const stage = project.stages[stageName];
@@ -385,7 +404,7 @@ function getOverdueProjects() {
 function renderProjects() {
     const grid = document.getElementById('projectGrid');
     const filteredProjects = getFilteredProjects();
-    
+
     // Sort projects by creation date (newest first)
     const sortedProjects = filteredProjects.sort((a, b) => {
         const dateA = new Date(a.createdat || a.createdAt);
@@ -406,7 +425,7 @@ function createProjectCard(project) {
 
     const currentStage = project.currentProjectStage || project.currentprojectstage || 'design';
     const currentDueDate = getCurrentDueDate(project);
-    
+
     card.innerHTML = `
         <div class="project-header">
             <div>
@@ -485,10 +504,10 @@ function updateStats() {
 function calculateProgress(status, project) {
     if (status === 'completed') return 100;
     if (status === 'yet-to-start') return 0;
-    
+
     const inUseStages = getInUseStages(project);
     if (inUseStages.length === 0) return 0;
-    
+
     // Count completed stages
     let completedStages = 0;
     inUseStages.forEach(stageName => {
@@ -497,7 +516,7 @@ function calculateProgress(status, project) {
             completedStages++;
         }
     });
-    
+
     // Calculate progress up to 90% based on completed stages, 100% only when status is completed
     const progressPerStage = 90 / inUseStages.length;
     return Math.min(90, completedStages * progressPerStage);
@@ -518,7 +537,7 @@ function openModal(project = null) {
         document.getElementById('projectRemarks').value = project.remarks || '';
         document.getElementById('projectType').value = project.projecttype || project.projectType || '';
         document.getElementById('projectBU').value = project.bu || '';
-        
+
         // Populate stage fields if they exist
         if (project.stages) {
             document.getElementById('mechanicalDesignPerson').value = project.stages['mechanical-design']?.person || '';
@@ -545,7 +564,7 @@ function openModal(project = null) {
         form.reset();
         document.getElementById('projectType').value = '';
         document.getElementById('projectBU').value = '';
-        
+
         // Reset stage fields
         document.getElementById('mechanicalDesignPerson').value = '';
         document.getElementById('mechanicalDesignTime').value = '';
@@ -595,11 +614,11 @@ function filterByOverdue() {
     document.getElementById('filterProjectType').value = '';
     document.getElementById('filterBU').value = '';
     document.getElementById('searchInput').value = '';
-    
+
     // Filter to show only overdue projects
     const grid = document.getElementById('projectGrid');
     const overdueProjects = getOverdueProjects();
-    
+
     grid.innerHTML = '';
     overdueProjects.forEach((project) => {
         const projectCard = createProjectCard(project);
@@ -614,7 +633,7 @@ function clearAllFilters() {
     document.getElementById('filterProjectType').value = '';
     document.getElementById('filterBU').value = '';
     document.getElementById('searchInput').value = '';
-    
+
     // Re-render all projects
     renderProjects();
 }
@@ -626,7 +645,7 @@ function exportData() {
     }
 
     const headers = ['ID', 'Name', 'Description', 'Status', 'Project Stage', 'Project Manager', 'Progress (%)', 'Remarks', 'Project Type', 'BU', 'Created At'];
-    
+
     const csvRows = [
         headers.join(','),
         ...projects.map((project) => [
@@ -684,7 +703,7 @@ function logoutAdmin() {
 function showTimeline(projectId = null) {
     const modal = document.getElementById('timelineModal');
     const content = document.getElementById('timelineContent');
-    
+
     if (projectId) {
         const project = projects.find(p => p.id == projectId);
         if (project && project.stages) {
@@ -699,12 +718,12 @@ function showTimeline(projectId = null) {
                 'dispatch': 'Ready for Dispatch',
                 'installation': 'Installation & Commissioning'
             };
-            
+
             let stagesHTML = '';
             inUseStages.forEach((stageName, index) => {
                 stagesHTML += generateStageHTML(stageName, index + 1, stageLabels[stageName], project);
             });
-            
+
             content.innerHTML = `
                 <div class="project-timeline-header">
                     <h3>${project.name} - Timeline</h3>
@@ -755,7 +774,7 @@ function showTimeline(projectId = null) {
             </div>
         `;
     }
-    
+
     modal.style.display = 'flex';
 }
 
@@ -764,7 +783,7 @@ function generateStageHTML(stageName, number, title, project) {
     const isCompleted = stage.completed || false;
     const isOverdue = isStageOverdue(stage);
     const toggleDisabled = !isAdminMode ? 'disabled' : '';
-    
+
     return `
         <div class="timeline-stage">
             <div class="stage-number">${number}</div>
@@ -795,7 +814,7 @@ function closeTimelineModal() {
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
-    
+
     sidebar.classList.toggle('collapsed');
     mainContent.classList.toggle('sidebar-collapsed');
 }
@@ -806,25 +825,25 @@ document.addEventListener('DOMContentLoaded', function () {
     loadAuthData().then(() => {
         showLoginScreen();
     });
-    
+
     // Employee login form submission
     document.getElementById('employeeLoginForm').addEventListener('submit', handleEmployeeLogin);
 
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
-        
+
         // Validate required fields and convert to uppercase
         const name = document.getElementById('projectName').value.trim().toUpperCase();
         const description = document.getElementById('projectDescription').value.trim().toUpperCase();
         const assignee = document.getElementById('projectAssignee').value.trim().toUpperCase();
         const projectType = document.getElementById('projectType').value;
         const bu = document.getElementById('projectBU').value;
-        
+
         if (!name || !description || !assignee || !projectType || !bu) {
             alert('Please fill in all required fields');
             return;
         }
-        
+
         const status = document.getElementById('projectStatus').value;
         const progress = calculateProgress(status, { stages: {} });
 
@@ -896,7 +915,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (index !== -1) {
                 const existingProject = projects[index];
                 project = { ...existingProject, ...formData };
-                
+
                 // Preserve existing stage completion status and timestamps
                 if (existingProject.stages) {
                     Object.keys(project.stages).forEach(stageName => {
@@ -906,7 +925,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     });
                 }
-                
+
                 // Set current project stage based on completed toggles
                 project.currentProjectStage = getCurrentProjectStage(project);
                 // Recalculate progress based on new values
@@ -914,6 +933,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 projects[index] = project;
             }
         }
+```text
+
         else {
             project = {
                 id: Date.now(),
@@ -990,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', function () {
 async function updateOTDRDataViaBackend(projectId, stageName, isCompleted, project) {
     const stage = project.stages[stageName];
     if (!stage || !stage.person || stage.person.trim() === '') return;
-    
+
     try {
         const response = await fetch('/update-otdr', {
             method: 'POST',
@@ -1006,7 +1027,7 @@ async function updateOTDRDataViaBackend(projectId, stageName, isCompleted, proje
                 completedDate: isCompleted ? new Date().toISOString().split('T')[0] : null
             })
         });
-        
+
         if (response.ok) {
             console.log(`OTDR data updated for ${stageName}`);
         } else {
@@ -1020,7 +1041,7 @@ async function updateOTDRDataViaBackend(projectId, stageName, isCompleted, proje
 async function showOTDRModal() {
     const modal = document.getElementById('otdrModal');
     const content = document.getElementById('otdrContent');
-    
+
     const stageNames = ['mechanical-design', 'electrical-design', 'manufacturing', 'wiring', 'assembly', 'controls', 'dispatch', 'installation'];
     const stageLabels = {
         'mechanical-design': 'Mechanical Design',
@@ -1032,20 +1053,20 @@ async function showOTDRModal() {
         'dispatch': 'Ready for Dispatch',
         'installation': 'Installation & Commissioning'
     };
-    
+
     let otdrHTML = '<div class="otdr-list">';
-    
+
     for (const stageName of stageNames) {
         try {
             const response = await fetch(`otdr-data/${stageName}-otdr.json`);
             let otdrData;
-            
+
             if (response.ok) {
                 otdrData = await response.json();
             } else {
                 otdrData = { otdr: 0, totalProjects: 0, onTimeProjects: 0 };
             }
-            
+
             otdrHTML += `
                 <div class="otdr-item">
                     <div class="otdr-stage-name">${stageLabels[stageName]}</div>
@@ -1067,7 +1088,7 @@ async function showOTDRModal() {
             `;
         }
     }
-    
+
     otdrHTML += '</div>';
     content.innerHTML = otdrHTML;
     modal.style.display = 'flex';
@@ -1081,27 +1102,27 @@ function closeOTDRModal() {
 function checkUpcomingDeadlines() {
     const now = new Date();
     const currentHour = now.getHours();
-    
+
     // Check if it's March 31st and reset OTDR data
     if (now.getMonth() === 2 && now.getDate() === 31) { // March is month 2 (0-indexed)
         resetOTDRAnnually();
     }
-    
+
     // Only send emails between 1 PM and 3 PM Indian time to avoid spam
     if (currentHour < 13 || currentHour >= 15 ) {
         console.log('Email check skipped - outside business hours (1-3 PM Indian time)');
         return;
     }
-    
+
     const today = new Date();
     const fiveDaysFromNow = new Date();
     fiveDaysFromNow.setDate(today.getDate() + 5);
-    
+
     console.log(`Checking deadlines at ${now.toLocaleString()} for due date: ${fiveDaysFromNow.toDateString()}`);
-    
+
     projects.forEach(project => {
         if (!project.stages) return;
-        
+
         const inUseStages = getInUseStages(project);
         inUseStages.forEach(stageName => {
             const stage = project.stages[stageName];
@@ -1109,7 +1130,7 @@ function checkUpcomingDeadlines() {
                 const dueDate = new Date(stage.dueDate);
                 const timeDiff = dueDate.getTime() - today.getTime();
                 const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-                
+
                 // Send email if exactly 5 days before due date
                 if (daysDiff === 5) {
                     console.log(`Sending reminder for project: ${project.name}, stage: ${stageName}, due: ${stage.dueDate}`);
@@ -1124,15 +1145,15 @@ async function sendEmailReminder(project, stageName, stage) {
     try {
         const emailResponse = await fetch('email-database.json');
         const emails = await emailResponse.json();
-        
+
         const recipientEmail = emails[stageName];
-        
+
         // Skip sending email for dispatch stage as there's no email configured
         if (stageName === 'dispatch') {
             console.log(`Skipping email for dispatch stage - no email configured`);
             return;
         }
-        
+
         if (recipientEmail) {
             const emailData = {
                 to: recipientEmail,
@@ -1156,7 +1177,7 @@ Projects Team`,
                 <h3>Project Deadline Reminder</h3>
                 <p>Dear Team,</p>
                 <p>This is a reminder that the <strong>${stageName.replace(/-/g, ' ')}</strong> stage for project "<strong>${project.name}</strong>" is due in 5 days.</p>
-                
+
                 <h4>Project Details:</h4>
                 <ul>
                     <li><strong>Project Name:</strong> ${project.name}</li>
@@ -1165,7 +1186,7 @@ Projects Team`,
                     <li><strong>Due Date:</strong> ${stage.dueDate}</li>
                     <li><strong>Person in Charge:</strong> ${stage.person}</li>
                 </ul>
-                
+
                 <p>Please ensure timely completion.</p>
                 <p>Best regards,<br>Projects Team</p>
                 `
@@ -1194,9 +1215,9 @@ Projects Team`,
 // Reset OTDR data annually on March 31st
 async function resetOTDRAnnually() {
     const stageNames = ['mechanical-design', 'electrical-design', 'manufacturing', 'wiring', 'assembly', 'controls', 'dispatch', 'installation'];
-    
+
     console.log('Resetting OTDR data for new fiscal year...');
-    
+
     for (const stageName of stageNames) {
         try {
             const resetData = {
@@ -1206,7 +1227,7 @@ async function resetOTDRAnnually() {
                 onTimeProjects: 0,
                 otdr: 0
             };
-            
+
             const response = await fetch('/reset-otdr', {
                 method: 'POST',
                 headers: {
@@ -1217,7 +1238,7 @@ async function resetOTDRAnnually() {
                     data: resetData
                 })
             });
-            
+
             if (response.ok) {
                 console.log(`OTDR data reset for ${stageName}`);
             } else {

@@ -43,81 +43,9 @@ app.post('/send-email', async (req, res) => {
     }
 });
 
-// OTDR update endpoint
-app.post('/update-otdr', async (req, res) => {
-    try {
-        const { projectId, projectName, stageName, dueDate, completed, completedDate } = req.body;
-        const filePath = path.join(__dirname, 'otdr-data', `${stageName}-otdr.json`);
-        
-        // Read existing OTDR data
-        let otdrData;
-        try {
-            const fileContent = await fs.readFile(filePath, 'utf8');
-            otdrData = JSON.parse(fileContent);
-        } catch (error) {
-            // Create new OTDR data if file doesn't exist
-            otdrData = {
-                stageName: stageName,
-                projects: [],
-                totalProjects: 0,
-                onTimeProjects: 0,
-                otdr: 0
-            };
-        }
-        
-        const existingProject = otdrData.projects.find(p => p.projectId === projectId);
-        
-        if (!existingProject && dueDate) {
-            // Add new project to OTDR tracking
-            otdrData.projects.push({
-                projectId: projectId,
-                projectName: projectName,
-                dueDate: dueDate,
-                completed: completed,
-                completedDate: completedDate,
-                onTime: null
-            });
-            otdrData.totalProjects++;
-        } else if (existingProject) {
-            // Update existing project
-            existingProject.completed = completed;
-            if (completed && completedDate) {
-                existingProject.completedDate = completedDate;
-                existingProject.onTime = new Date(completedDate) <= new Date(existingProject.dueDate);
-            } else {
-                existingProject.completedDate = null;
-                existingProject.onTime = null;
-            }
-        }
-        
-        // Recalculate OTDR
-        const completedProjects = otdrData.projects.filter(p => p.completed);
-        otdrData.onTimeProjects = completedProjects.filter(p => p.onTime).length;
-        otdrData.otdr = otdrData.totalProjects > 0 ? (otdrData.onTimeProjects / otdrData.totalProjects * 100).toFixed(1) : 0;
-        
-        // Save updated OTDR data
-        await fs.writeFile(filePath, JSON.stringify(otdrData, null, 2));
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error updating OTDR data:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// OTDR reset endpoint
-app.post('/reset-otdr', async (req, res) => {
-    try {
-        const { stageName, data } = req.body;
-        const filePath = path.join(__dirname, 'otdr-data', `${stageName}-otdr.json`);
-        
-        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error resetting OTDR data:', error);
-        res.status(500).json({ success: false, error: error.message });
-    }
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'Server running', timestamp: new Date().toISOString() });
 });
 
 // Serve static files
