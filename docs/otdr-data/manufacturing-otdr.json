@@ -1,0 +1,16 @@
+{
+  "stageName": "manufacturing",
+  "projects": [
+    {
+      "projectId": 1750351818815,
+      "projectName": "PMA002",
+      "dueDate": "2025-06-22",
+      "completed": true,
+      "completedDate": "2025-06-19",
+      "onTime": null
+    }
+  ],
+  "totalProjects": 1,
+  "onTimeProjects": 0,
+  "otdr": "0.0"
+}

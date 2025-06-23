@@ -1,0 +1,616 @@
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Project Tracker - Senior Developer Dashboard</title>
+        <link rel="icon" type="image/png" href="image.png" />
+        <link rel="shortcut icon" type="image/png" href="image.png" />
+        <link rel="stylesheet" href="styles.css" />
+        <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+        <script>
+            // Supabase configuration
+            const supabaseUrl = "https://ufjksbrgrywtqwzhvvzt.supabase.co";
+            const supabaseKey =
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmamtzYnJncnl3dHF3emh2dnp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2NjIyMDMsImV4cCI6MjA2NTIzODIwM30.nrqTn-1ectbnnJnOZvLFjOX5t4gSkG68SDQ59C_5ZiU";
+            const supabase = window.supabase.createClient(
+                supabaseUrl,
+                supabaseKey,
+            );
+        </script>
+    </head>
+    <body>
+        <!-- Employee Login Screen -->
+        <div id="loginScreen" class="login-screen">
+            <div class="login-modal">
+                <div class="login-header">
+                    <img
+                        src="mikro-logo.svg"
+                        alt="Mikro Logo"
+                        class="login-logo"
+                    />
+                    <h1>Project Tracker</h1>
+                    <p>Enter your Employee ID to access the system</p>
+                </div>
+                <form id="employeeLoginForm">
+                    <div class="form-group">
+                        <label for="employeeId">Employee ID</label>
+                        <input
+                            type="text"
+                            id="employeeId"
+                            placeholder="Enter ID here "
+                            required
+                        />
+                    </div>
+                    <button type="submit" class="employee-signin-btn">
+                        Sign In
+                    </button>
+                </form>
+                <div
+                    id="loginError"
+                    class="login-error"
+                    style="display: none"
+                ></div>
+            </div>
+        </div>
+
+        <!-- Main Application -->
+        <div id="mainApp" class="layout-container" style="display: none">
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <img
+                        src="mikro-logo.svg"
+                        alt="Mikro Logo"
+                        class="sidebar-logo"
+                    />
+                </div>
+
+                <div class="sidebar-filters">
+                    <div class="filter-group">
+                        <label class="filter-label">Search</label>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search projects..."
+                            onkeyup="filterProjects()"
+                        />
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Project Type</label>
+                        <select
+                            id="filterProjectType"
+                            onchange="filterProjects()"
+                        >
+                            <option value="">All Project Types</option>
+                            <option value="p-new">P-NEW</option>
+                            <option value="p-repeat">P-REPEAT</option>
+                            <option value="s">S</option>
+                            <option value="e">E</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Business Unit</label>
+                        <select id="filterBU" onchange="filterProjects()">
+                            <option value="">All BUs</option>
+                            <option value="ev">EV</option>
+                            <option value="lasers">LASERS</option>
+                            <option value="global">GLOBAL</option>
+                            <option value="ezcam">EZCAM</option>
+                            <option value="leak-tester">LEAK TESTER</option>
+                            <option value="service">SERVICE</option>
+                            <option value="other">OTHER</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <select id="filterStatus" onchange="filterProjects()">
+                            <option value="">All Status</option>
+                            <option value="yet-to-start">YET TO START</option>
+                            <option value="active">ACTIVE</option>
+                            <option value="completed">COMPLETED</option>
+                            <option value="on-hold">ON HOLD</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Stage</label>
+                        <select id="filterPriority" onchange="filterProjects()">
+                            <option value="">All Stages</option>
+                            <option value="mechanical-design">
+                                Mechanical Design
+                            </option>
+                            <option value="electrical-design">
+                                Electrical Design
+                            </option>
+                            <option value="manufacturing">Manufacturing</option>
+                            <option value="wiring">Wiring</option>
+                            <option value="assembly">Assembly</option>
+                            <option value="controls">Controls</option>
+                            <option value="dispatch">Ready for Dispatch</option>
+                            <option value="installation">I&C</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="sidebar-actions">
+                    <div id="adminOnlyControls" style="display: none">
+                        <button class="btn sidebar-btn" onclick="openModal()">
+                            + Add New Project
+                        </button>
+                    </div>
+                    <button
+                        class="btn btn-secondary sidebar-btn"
+                        onclick="exportData()"
+                    >
+                        Export Data
+                    </button>
+                    <button
+                        class="btn btn-info sidebar-btn"
+                        onclick="showOTDRModal()"
+                    >
+                        Check OTDR
+                    </button>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="header">
+                    <div class="header-left">
+                        <button
+                            class="sidebar-toggle"
+                            onclick="toggleSidebar()"
+                        >
+                            ☰
+                        </button>
+                        <h1 class="header-title">Project Tracker</h1>
+                    </div>
+                    <div class="header-right">
+                        <span id="userInfo" class="user-info"></span>
+                        <button
+                            id="adminLoginBtn"
+                            class="btn admin-login-btn"
+                            onclick="showAdminLogin()"
+                        >
+                            Admin Login
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div
+                        class="stat-card clickable"
+                        onclick="clearAllFilters()"
+                    >
+                        <div class="stat-number total" id="totalProjects">
+                            0
+                        </div>
+                        <div class="stat-label">Total Projects</div>
+                    </div>
+                    <div
+                        class="stat-card clickable"
+                        onclick="filterByStatus('active')"
+                    >
+                        <div class="stat-number active" id="activeProjects">
+                            0
+                        </div>
+                        <div class="stat-label">Active Projects</div>
+                    </div>
+                    <div
+                        class="stat-card clickable"
+                        onclick="filterByStatus('completed')"
+                    >
+                        <div
+                            class="stat-number completed"
+                            id="completedProjects"
+                        >
+                            0
+                        </div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div
+                        class="stat-card clickable"
+                        onclick="filterByOverdue()"
+                    >
+                        <div class="stat-number overdue" id="overdueProjects">
+                            0
+                        </div>
+                        <div class="stat-label">Overdue</div>
+                    </div>
+                </div>
+
+                <div class="project-grid" id="projectGrid">
+                    <!-- Projects will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for adding/editing projects -->
+        <div class="modal" id="projectModal">
+            <div class="modal-content">
+                <h2 id="modalTitle">Add New Project</h2>
+                <form id="projectForm">
+                    <div class="form-group">
+                        <label for="projectName">Project Name *</label>
+                        <input type="text" id="projectName" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="projectDescription">Description *</label>
+                        <textarea
+                            id="projectDescription"
+                            placeholder="Brief description of the project"
+                            class="description-small"
+                            required
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectAssignee">Project Manager *</label>
+                        <input
+                            type="text"
+                            id="projectAssignee"
+                            placeholder="Project manager name"
+                            required
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="projectType">Project Type *</label>
+                        <select id="projectType" required>
+                            <option value="">Select Project Type</option>
+                            <option value="p-new">P-NEW</option>
+                            <option value="p-repeat">P-REPEAT</option>
+                            <option value="s">S</option>
+                            <option value="e">E</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectBU">BU *</label>
+                        <select id="projectBU" required>
+                            <option value="">Select BU</option>
+                            <option value="ev">EV</option>
+                            <option value="lasers">LASERS</option>
+                            <option value="global">GLOBAL</option>
+                            <option value="ezcam">EZCAM</option>
+                            <option value="leak-tester">LEAK TESTER</option>
+                            <option value="service">SERVICE</option>
+                            <option value="other">OTHER</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectStatus">Status</label>
+                        <select id="projectStatus" required>
+                            <option value="yet-to-start">YET TO START</option>
+                            <option value="active">ACTIVE</option>
+                            <option value="completed">COMPLETED</option>
+                            <option value="on-hold">ON HOLD</option>
+                        </select>
+                    </div>
+
+                    <div class="stages-container">
+                        <div class="stages-title">Project Stages Timeline</div>
+
+                        <div class="stage-item">
+                            <div class="stage-label">1. Mechanical Design</div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Person in Charge</label
+                                >
+                                <input
+                                    type="text"
+                                    id="mechanicalDesignPerson"
+                                    class="stage-input"
+                                    placeholder="Enter name"
+                                />
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Due Date</label
+                                >
+                                <input
+                                    type="date"
+                                    id="mechanicalDesignTime"
+                                    class="stage-input"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="stage-item">
+                            <div class="stage-label">2. Electrical Design</div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Person in Charge</label
+                                >
+                                <input
+                                    type="text"
+                                    id="electricalDesignPerson"
+                                    class="stage-input"
+                                    placeholder="Enter name"
+                                />
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Due Date</label
+                                >
+                                <input
+                                    type="date"
+                                    id="electricalDesignTime"
+                                    class="stage-input"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="stage-item">
+                            <div class="stage-label">3. Manufacturing</div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Person in Charge</label
+                                >
+                                <input
+                                    type="text"
+                                    id="manufacturingPerson"
+                                    class="stage-input"
+                                    placeholder="Enter name"
+                                />
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Due Date</label
+                                >
+                                <input
+                                    type="date"
+                                    id="manufacturingTime"
+                                    class="stage-input"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="stage-item">
+                            <div class="stage-label">4. Wiring</div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Person in Charge</label
+                                >
+                                <input
+                                    type="text"
+                                    id="wiringPerson"
+                                    class="stage-input"
+                                    placeholder="Enter name"
+                                />
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Due Date</label
+                                >
+                                <input
+                                    type="date"
+                                    id="wiringTime"
+                                    class="stage-input"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="stage-item">
+                            <div class="stage-label">5. Assembly</div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Person in Charge</label
+                                >
+                                <input
+                                    type="text"
+                                    id="assemblyPerson"
+                                    class="stage-input"
+                                    placeholder="Enter name"
+                                />
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Due Date</label
+                                >
+                                <input
+                                    type="date"
+                                    id="assemblyTime"
+                                    class="stage-input"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="stage-item">
+                            <div class="stage-label">6. Controls</div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Person in Charge</label
+                                >
+                                <input
+                                    type="text"
+                                    id="controlsPerson"
+                                    class="stage-input"
+                                    placeholder="Enter name"
+                                />
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Due Date</label
+                                >
+                                <input
+                                    type="date"
+                                    id="controlsTime"
+                                    class="stage-input"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="stage-item">
+                            <div class="stage-label">7. Ready for Dispatch</div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Person in Charge</label
+                                >
+                                <input
+                                    type="text"
+                                    id="dispatchPerson"
+                                    class="stage-input"
+                                    placeholder="Enter name"
+                                />
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Due Date</label
+                                >
+                                <input
+                                    type="date"
+                                    id="dispatchTime"
+                                    class="stage-input"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="stage-item">
+                            <div class="stage-label">
+                                8. Installation & Commissioning
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Person in Charge</label
+                                >
+                                <input
+                                    type="text"
+                                    id="installationPerson"
+                                    class="stage-input"
+                                    placeholder="Enter name"
+                                />
+                            </div>
+                            <div class="stage-input-group">
+                                <label class="stage-input-label"
+                                    >Due Date</label
+                                >
+                                <input
+                                    type="date"
+                                    id="installationTime"
+                                    class="stage-input"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="projectRemarks">Remarks</label>
+                        <textarea
+                            id="projectRemarks"
+                            placeholder="Additional remarks or notes"
+                        ></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            onclick="closeModal()"
+                        >
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn">Save Project</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Timeline Modal -->
+        <div class="modal" id="timelineModal">
+            <div class="modal-content timeline-modal">
+                <h2></h2>
+                <div id="timelineContent">
+                    <div class="timeline-stages">
+                        <div class="timeline-stage">
+                            <div class="stage-number">1</div>
+                            <div class="stage-info">
+                                <h3>Design</h3>
+                                <p>Initial design and planning phase</p>
+                            </div>
+                        </div>
+                        <div class="timeline-stage">
+                            <div class="stage-number">2</div>
+                            <div class="stage-info">
+                                <h3>Production</h3>
+                                <p>Manufacturing and production phase</p>
+                            </div>
+                        </div>
+                        <div class="timeline-stage">
+                            <div class="stage-number">3</div>
+                            <div class="stage-info">
+                                <h3>Controls</h3>
+                                <p>Control systems integration</p>
+                            </div>
+                        </div>
+                        <div class="timeline-stage">
+                            <div class="stage-number">4</div>
+                            <div class="stage-info">
+                                <h3>Ready for Dispatch</h3>
+                                <p>Final preparation and dispatch</p>
+                            </div>
+                        </div>
+                        <div class="timeline-stage">
+                            <div class="stage-number">5</div>
+                            <div class="stage-info">
+                                <h3>Installation & Commissioning</h3>
+                                <p>On-site installation and commissioning</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        onclick="closeTimelineModal()"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- OTDR Modal -->
+        <div class="modal" id="otdrModal">
+            <div class="modal-content otdr-modal">
+                <h2>On-Time Delivery Rate (OTDR) by Stage</h2>
+                <div id="otdrContent">
+                    <!-- OTDR data will be populated here -->
+                </div>
+                <div class="form-actions">
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        onclick="closeOTDRModal()"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Login Modal -->
+        <div class="modal" id="adminModal">
+            <div class="modal-content admin-modal">
+                <h2>Admin Login</h2>
+                <form id="adminForm">
+                    <div class="form-group">
+                        <label for="adminPassword">Password</label>
+                        <input type="password" id="adminPassword" required />
+                    </div>
+                    <div class="form-actions">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            onclick="closeAdminModal()"
+                        >
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script src="script.js"></script>
+    </body>
+</html>

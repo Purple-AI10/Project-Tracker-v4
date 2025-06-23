@@ -1,0 +1,16 @@
+{
+  "stageName": "mechanical-design",
+  "projects": [
+    {
+      "projectId": 1750230529362,
+      "projectName": "PA004",
+      "dueDate": "2025-06-17",
+      "completed": false,
+      "completedDate": null,
+      "onTime": null
+    }
+  ],
+  "totalProjects": 1,
+  "onTimeProjects": 0,
+  "otdr": "0.0"
+}
