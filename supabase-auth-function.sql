@@ -1,3 +1,8 @@
+
+-- Drop existing functions first
+DROP FUNCTION IF EXISTS validate_employee_login(TEXT);
+DROP FUNCTION IF EXISTS get_all_employees();
+
 -- Create a function to validate employee authentication
 CREATE OR REPLACE FUNCTION validate_employee_login(employee_id_input TEXT)
 RETURNS JSON AS $$
@@ -33,12 +38,20 @@ $$ LANGUAGE plpgsql;
 
 -- Function to get all employees (for fallback auth data loading)
 CREATE OR REPLACE FUNCTION get_all_employees()
-RETURNS TABLE(employee_id TEXT, name TEXT) AS $$
+RETURNS JSON AS $$
+DECLARE
+    result JSON;
 BEGIN
-    RETURN QUERY
-    SELECT e.employee_id, e.name
-    FROM employees e
-    ORDER BY e.employee_id;
+    SELECT json_agg(
+        json_build_object(
+            'employee_id', employee_id,
+            'name', name
+        )
+    ) INTO result
+    FROM employees
+    ORDER BY employee_id;
+    
+    RETURN COALESCE(result, '[]'::JSON);
 END;
 $$ LANGUAGE plpgsql;
 

@@ -1079,31 +1079,25 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// Real-time OTDR update via backend
+// Real-time OTDR update via Supabase
 async function updateOTDRDataViaBackend(projectId, stageName, isCompleted, project) {
     const stage = project.stages[stageName];
     if (!stage || !stage.person || stage.person.trim() === '') return;
 
     try {
-        const response = await fetch('/update-otdr', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                projectId: projectId,
-                projectName: project.name,
-                stageName: stageName,
-                dueDate: stage.dueDate,
-                completed: isCompleted,
-                completedDate: isCompleted ? new Date().toISOString().split('T')[0] : null
-            })
+        const { data, error } = await supabase.rpc('update_otdr_data', {
+            p_project_id: projectId.toString(),
+            p_project_name: project.name,
+            p_stage_name: stageName,
+            p_due_date: stage.dueDate,
+            p_completed: isCompleted,
+            p_completed_date: isCompleted ? new Date().toISOString().split('T')[0] : null
         });
 
-        if (response.ok) {
-            console.log(`OTDR data updated for ${stageName}`);
+        if (error) {
+            console.error('Failed to update OTDR data:', error);
         } else {
-            console.error('Failed to update OTDR data');
+            console.log(`OTDR data updated for ${stageName}:`, data);
         }
     } catch (error) {
         console.error('Error updating OTDR data:', error);
@@ -1121,12 +1115,11 @@ async function showOTDRModal() {
 
     try {
         // Fetch OTDR stats from Supabase
-        const response = await fetch('/api/otdr-stats');
+        const { data, error } = await supabase.rpc('get_otdr_stats');
         let otdrData = [];
 
-        if (response.ok) {
-            const result = await response.json();
-            otdrData = result.data || [];
+        if (!error && data) {
+            otdrData = Array.isArray(data) ? data : [];
         }
 
         const stageLabels = {
