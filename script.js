@@ -41,55 +41,50 @@ let authData = {};          // Employee authentication data
  * Load employee authentication data from Supabase or fallback to JSON
  * Sets up the employee ID to name mapping for login validation
  */
+
 async function loadAuthData() {
     try {
-        // First try Supabase
         if (typeof supabase !== 'undefined') {
-            console.log('Attempting to load from Supabase...');
-            const { data: employees, error } = await supabase
-                .from('employees')
-                .select('employee_id, name');
+            console.log('🟡 Loading employee data from Supabase...');
 
-            if (!error && employees && employees.length > 0) {
-                // Convert array to object for compatibility
+            const { data, error } = await supabase.rpc('get_all_employees');
+            if (error) throw error;
+
+            if (Array.isArray(data)) {
                 const employeeData = {};
-                employees.forEach(emp => {
+                data.forEach(emp => {
                     employeeData[emp.employee_id] = emp.name;
                 });
-                
-                authData = employeeData;
-                console.log('✅ Employee data loaded from Supabase:', Object.keys(authData).length, 'employees');
-                return employeeData;
-            } else {
-                console.log('Supabase error or no data:', error);
-            }
-        } else {
-            console.log('Supabase not available, using fallback');
-        }
 
-        // Fallback to JSON file
-        console.log('Loading from auth_ids.json fallback...');
-        const response = await fetch('auth_ids.json');
-        if (!response.ok) {
-            throw new Error(`Failed to load auth_ids.json: ${response.status}`);
+                authData = employeeData;
+                console.log(`✅ Loaded ${Object.keys(authData).length} employees from Supabase`);
+                return;
+            } else {
+                console.log('⚠️ Unexpected response from Supabase:', data);
+            }
         }
-        
-        const employeeData = await response.json();
-        authData = employeeData;
-        console.log('✅ Employee data loaded from JSON fallback:', Object.keys(authData).length, 'employees');
-        return employeeData;
-    } catch (error) {
-        console.error('❌ Error loading employee data:', error);
-        // Load default fallback data to prevent complete failure
-        authData = {
-            'M10323': 'VAIDEHI PAWAR',
-            'M20052': 'ANIKET CHENDAGE',
-            'M19003': 'MAHESH PATIL'
-        };
-        console.log('Using emergency fallback data');
-        return authData;
+        throw new Error('Supabase unavailable or returned no data');
+    } catch (err) {
+        console.warn('🔻 Supabase load failed, using fallback:', err);
+
+        try {
+            const response = await fetch('auth_ids.json');
+            if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+            const fallback = await response.json();
+            authData = fallback;
+            console.log(`✅ Fallback JSON loaded: ${Object.keys(authData).length} employees`);
+        } catch (jsonErr) {
+            console.error('❌ Failed loading fallback JSON too:', jsonErr);
+            authData = {
+                'M10323': 'VAIDEHI PAWAR',
+                'M20052': 'ANIKET CHENDAGE',
+                'M19003': 'MAHESH PATIL'
+            };
+            console.log('🚨 Using hardcoded fallback data');
+        }
     }
 }
+
 
 /**
  * Validate employee login credentials
@@ -98,102 +93,63 @@ async function loadAuthData() {
  * @param {string} employeeId - Employee ID entered by user
  * @returns {Object|null} Employee data if valid, null if invalid
  */
-function validateEmployee(employeeId) {
+async function validateEmployee(employeeId) {
     const normalizedId = employeeId.toUpperCase().trim();
-    console.log('🔍 Validating normalized ID:', normalizedId);
-    console.log('📊 Auth data keys:', Object.keys(authData));
-    console.log('✓ Auth data has key:', normalizedId, '?', authData.hasOwnProperty(normalizedId));
-    
-    if (authData[normalizedId]) {
-        const employee = {
-            id: normalizedId,
-            name: authData[normalizedId]
-        };
-        console.log('✅ Employee validated:', employee);
-        return employee;
+    console.log('🔍 Validating ID via Supabase:', normalizedId);
+
+    const { data, error } = await supabase.rpc('validate_employee_login', {
+        employee_id_input: normalizedId
+    });
+
+    if (error) {
+        console.error('❌ Supabase validation error:', error);
+        return null;
     }
-    
-    console.log('❌ Employee not found in auth data');
+
+    if (data?.success && data.employee) {
+        console.log('✅ Authenticated:', data.employee);
+        return {
+            id: data.employee.id,
+            name: data.employee.name
+        };
+    }
+
+    console.warn('❌ Employee not found:', data?.message);
     return null;
 }
+
 
 /**
  * Handle employee login form submission
  * Validates credentials and shows main app if successful
  */
-function handleEmployeeLogin(event) {
+async function handleEmployeeLogin(event) {
     event.preventDefault();
-    console.log('🔐 Login form submitted');
-    
-    const employeeIdInput = document.getElementById('employeeId');
-    if (!employeeIdInput) {
-        console.error('❌ Employee ID input not found');
-        return;
-    }
-    
-    const employeeId = employeeIdInput.value.trim().toUpperCase();
-    
-    console.log('🔍 Login attempt with ID:', employeeId);
-    console.log('📋 Available auth data keys:', Object.keys(authData));
-    
-    // Validate input
-    if (!employeeId) {
-        console.log('❌ Empty employee ID');
+    const input = document.getElementById('employeeId');
+    const id = input.value.trim().toUpperCase();
+    if (!id) {
         showLoginError('Please enter your Employee ID.');
         return;
     }
 
-    // Check if auth data is loaded
-    if (Object.keys(authData).length === 0) {
-        console.log('⏳ Auth data not loaded, retrying...');
-        showLoginError('System is loading. Please wait...');
-        
-        // Retry loading auth data
-        loadAuthData().then(() => {
-            if (Object.keys(authData).length > 0) {
-                console.log('✅ Auth data loaded on retry, attempting login again');
-                handleEmployeeLogin(event);
-            } else {
-                showLoginError('Failed to load employee data. Please refresh the page.');
-            }
-        });
-        return;
-    }
-
-    // Validate employee
-    const employee = validateEmployee(employeeId);
+    const employee = await validateEmployee(id);
 
     if (employee) {
-        console.log('✅ Valid employee found:', employee);
         currentUser = employee;
-        
-        // Hide login screen and show main app
         showMainApp();
         hideLoginError();
-        
-        // Clear the input
-        employeeIdInput.value = '';
-        
-        // Update user info display
-        const userInfoElement = document.getElementById('userInfo');
-        if (userInfoElement) {
-            userInfoElement.textContent = `Welcome, ${employee.name}`;
-        }
-        
-        // Initialize app after successful authentication
-        try {
-            listenForProjects();
-            checkUpcomingDeadlines();
-        } catch (error) {
-            console.error('Error initializing app:', error);
-        }
+        input.value = '';
+
+        document.getElementById('userInfo').textContent = `Welcome, ${employee.name}`;
+        listenForProjects();
+        checkUpcomingDeadlines();
     } else {
-        console.log('❌ Invalid employee ID entered');
-        showLoginError('Invalid Employee ID. Please check and try again.');
-        employeeIdInput.focus();
-        employeeIdInput.select();
+        showLoginError('Invalid Employee ID.');
+        input.focus();
+        input.select();
     }
 }
+
 
 /**
  * Show the main application interface
