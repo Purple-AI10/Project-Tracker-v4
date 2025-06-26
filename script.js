@@ -43,8 +43,9 @@ let authData = {};          // Employee authentication data
  */
 async function loadAuthData() {
     try {
-        // Check if Supabase is available
+        // First try Supabase
         if (typeof supabase !== 'undefined') {
+            console.log('Attempting to load from Supabase...');
             const { data: employees, error } = await supabase
                 .from('employees')
                 .select('employee_id, name');
@@ -57,47 +58,62 @@ async function loadAuthData() {
                 });
                 
                 authData = employeeData;
-                console.log('Employee authentication data loaded from Supabase:', Object.keys(authData).length, 'employees');
+                console.log('✅ Employee data loaded from Supabase:', Object.keys(authData).length, 'employees');
                 return employeeData;
+            } else {
+                console.log('Supabase error or no data:', error);
             }
+        } else {
+            console.log('Supabase not available, using fallback');
         }
 
         // Fallback to JSON file
+        console.log('Loading from auth_ids.json fallback...');
         const response = await fetch('auth_ids.json');
         if (!response.ok) {
-            throw new Error('Failed to load auth_ids.json');
+            throw new Error(`Failed to load auth_ids.json: ${response.status}`);
         }
         
         const employeeData = await response.json();
         authData = employeeData;
-        console.log('Employee authentication data loaded from JSON fallback:', Object.keys(authData).length, 'employees');
+        console.log('✅ Employee data loaded from JSON fallback:', Object.keys(authData).length, 'employees');
         return employeeData;
     } catch (error) {
-        console.error('Error loading employee data:', error);
-        // Return empty object to prevent further errors
-        authData = {};
-        return {};
+        console.error('❌ Error loading employee data:', error);
+        // Load default fallback data to prevent complete failure
+        authData = {
+            'M10323': 'VAIDEHI PAWAR',
+            'M20052': 'ANIKET CHENDAGE',
+            'M19003': 'MAHESH PATIL'
+        };
+        console.log('Using emergency fallback data');
+        return authData;
     }
 }
 
 /**
  * Validate employee login credentials
- * Checks if the entered employee ID exists in auth_ids.json
+ * Checks if the entered employee ID exists in auth data
  * 
  * @param {string} employeeId - Employee ID entered by user
  * @returns {Object|null} Employee data if valid, null if invalid
  */
 function validateEmployee(employeeId) {
     const normalizedId = employeeId.toUpperCase().trim();
-    console.log('Validating normalized ID:', normalizedId);
-    console.log('Auth data has key:', normalizedId, '?', authData.hasOwnProperty(normalizedId));
+    console.log('🔍 Validating normalized ID:', normalizedId);
+    console.log('📊 Auth data keys:', Object.keys(authData));
+    console.log('✓ Auth data has key:', normalizedId, '?', authData.hasOwnProperty(normalizedId));
     
     if (authData[normalizedId]) {
-        return {
+        const employee = {
             id: normalizedId,
             name: authData[normalizedId]
         };
+        console.log('✅ Employee validated:', employee);
+        return employee;
     }
+    
+    console.log('❌ Employee not found in auth data');
     return null;
 }
 
@@ -107,44 +123,72 @@ function validateEmployee(employeeId) {
  */
 function handleEmployeeLogin(event) {
     event.preventDefault();
+    console.log('🔐 Login form submitted');
+    
     const employeeIdInput = document.getElementById('employeeId');
-    const employeeId = employeeIdInput.value.trim();
+    if (!employeeIdInput) {
+        console.error('❌ Employee ID input not found');
+        return;
+    }
     
-    console.log('Login attempt with ID:', employeeId);
-    console.log('Available auth data:', Object.keys(authData));
+    const employeeId = employeeIdInput.value.trim().toUpperCase();
     
+    console.log('🔍 Login attempt with ID:', employeeId);
+    console.log('📋 Available auth data keys:', Object.keys(authData));
+    
+    // Validate input
     if (!employeeId) {
+        console.log('❌ Empty employee ID');
         showLoginError('Please enter your Employee ID.');
         return;
     }
 
     // Check if auth data is loaded
     if (Object.keys(authData).length === 0) {
-        showLoginError('System is loading. Please try again in a moment.');
-        // Try to reload auth data
-        loadAuthData();
+        console.log('⏳ Auth data not loaded, retrying...');
+        showLoginError('System is loading. Please wait...');
+        
+        // Retry loading auth data
+        loadAuthData().then(() => {
+            if (Object.keys(authData).length > 0) {
+                console.log('✅ Auth data loaded on retry, attempting login again');
+                handleEmployeeLogin(event);
+            } else {
+                showLoginError('Failed to load employee data. Please refresh the page.');
+            }
+        });
         return;
     }
 
+    // Validate employee
     const employee = validateEmployee(employeeId);
 
     if (employee) {
-        console.log('Valid employee found:', employee);
+        console.log('✅ Valid employee found:', employee);
         currentUser = employee;
+        
+        // Hide login screen and show main app
         showMainApp();
         hideLoginError();
+        
         // Clear the input
         employeeIdInput.value = '';
+        
         // Update user info display
         const userInfoElement = document.getElementById('userInfo');
         if (userInfoElement) {
             userInfoElement.textContent = `Welcome, ${employee.name}`;
         }
+        
         // Initialize app after successful authentication
-        listenForProjects();
-        checkUpcomingDeadlines();
+        try {
+            listenForProjects();
+            checkUpcomingDeadlines();
+        } catch (error) {
+            console.error('Error initializing app:', error);
+        }
     } else {
-        console.log('Invalid employee ID entered');
+        console.log('❌ Invalid employee ID entered');
         showLoginError('Invalid Employee ID. Please check and try again.');
         employeeIdInput.focus();
         employeeIdInput.select();
@@ -867,34 +911,39 @@ function toggleSidebar() {
 
 // Form submission handler and modal logic
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('DOM loaded, initializing application...');
+    console.log('🚀 DOM loaded, initializing application...');
     
     // Check if all required elements exist
     const requiredElements = ['loginScreen', 'mainApp', 'employeeLoginForm', 'employeeId', 'loginError'];
     const missingElements = requiredElements.filter(id => !document.getElementById(id));
     
     if (missingElements.length > 0) {
-        console.error('Missing required DOM elements:', missingElements);
+        console.error('❌ Missing required DOM elements:', missingElements);
+        alert('Application initialization failed. Missing required elements: ' + missingElements.join(', '));
+        return;
+    }
+
+    console.log('✅ All required DOM elements found');
+
+    // Employee login form submission - attach listener first
+    const loginForm = document.getElementById('employeeLoginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleEmployeeLogin);
+        console.log('✅ Login form event listener attached');
+    } else {
+        console.error('❌ Employee login form not found');
         return;
     }
 
     // Load authentication data and show login screen
     loadAuthData().then(() => {
-        console.log('Auth data loaded, showing login screen');
+        console.log('✅ Auth data loaded successfully, showing login screen');
         showLoginScreen();
     }).catch(error => {
-        console.error('Failed to load auth data:', error);
-        showLoginError('Failed to load authentication data. Please refresh the page.');
+        console.error('❌ Failed to load auth data:', error);
+        showLoginScreen(); // Still show login screen with fallback data
+        showLoginError('System loaded with limited data. If login fails, please refresh the page.');
     });
-
-    // Employee login form submission
-    const loginForm = document.getElementById('employeeLoginForm');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleEmployeeLogin);
-        console.log('Login form event listener attached');
-    } else {
-        console.error('Employee login form not found');
-    }
 
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
