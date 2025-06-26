@@ -1040,7 +1040,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 .value.toUpperCase() || "",
                         dueDate:
                             document.getElementById("mechanicalDesignTime")
-                                .value || "",
+                                .value || null,
                         completed: false,
                         completedTimestamp: "Yet to be completed",
                     },
@@ -1051,7 +1051,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 .value.toUpperCase() || "",
                         dueDate:
                             document.getElementById("electricalDesignTime")
-                                .value || "",
+                                .value || null,
                         completed: false,
                         completedTimestamp: "Yet to be completed",
                     },
@@ -1062,7 +1062,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 .value.toUpperCase() || "",
                         dueDate:
                             document.getElementById("manufacturingTime")
-                                .value || "",
+                                .value || null,
                         completed: false,
                         completedTimestamp: "Yet to be completed",
                     },
@@ -1072,7 +1072,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 .getElementById("wiringPerson")
                                 .value.toUpperCase() || "",
                         dueDate:
-                            document.getElementById("wiringTime").value || "",
+                            document.getElementById("wiringTime").value || null,
                         completed: false,
                         completedTimestamp: "Yet to be completed",
                     },
@@ -1082,7 +1082,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 .getElementById("assemblyPerson")
                                 .value.toUpperCase() || "",
                         dueDate:
-                            document.getElementById("assemblyTime").value || "",
+                            document.getElementById("assemblyTime").value || null,
                         completed: false,
                         completedTimestamp: "Yet to be completed",
                     },
@@ -1092,7 +1092,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 .getElementById("controlsPerson")
                                 .value.toUpperCase() || "",
                         dueDate:
-                            document.getElementById("controlsTime").value || "",
+                            document.getElementById("controlsTime").value || null,
                         completed: false,
                         completedTimestamp: "Yet to be completed",
                     },
@@ -1102,7 +1102,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 .getElementById("dispatchPerson")
                                 .value.toUpperCase() || "",
                         dueDate:
-                            document.getElementById("dispatchTime").value || "",
+                            document.getElementById("dispatchTime").value || null,
                         completed: false,
                         completedTimestamp: "Yet to be completed",
                     },
@@ -1113,7 +1113,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 .value.toUpperCase() || "",
                         dueDate:
                             document.getElementById("installationTime").value ||
-                            "",
+                            null,
                         completed: false,
                         completedTimestamp: "Yet to be completed",
                     },
@@ -1249,7 +1249,7 @@ async function updateOTDRDataViaBackend(
             p_project_id: projectId.toString(),
             p_project_name: project.name,
             p_stage_name: stageName,
-            p_due_date: stage.dueDate,
+            p_due_date: stage.dueDate || null,
             p_completed: isCompleted,
             p_completed_date: isCompleted
                 ? new Date().toISOString().split("T")[0]
