@@ -29,11 +29,11 @@ DEBUGGING TIPS:
 */
 
 // ===== GLOBAL STATE VARIABLES =====
-let projects = [];          // Main projects array - holds all project data
-let editingId = null;       // Currently editing project ID (null = new project)
-let isAdminMode = false;    // Admin mode flag - controls edit/delete permissions
-let currentUser = null;     // Current authenticated employee
-let authData = {};          // Employee authentication data
+let projects = []; // Main projects array - holds all project data
+let editingId = null; // Currently editing project ID (null = new project)
+let isAdminMode = false; // Admin mode flag - controls edit/delete permissions
+let currentUser = null; // Current authenticated employee
+let authData = {}; // Employee authentication data
 
 // ===== EMPLOYEE AUTHENTICATION SYSTEM =====
 
@@ -44,80 +44,83 @@ let authData = {};          // Employee authentication data
 
 async function loadAuthData() {
     try {
-        if (typeof supabase !== 'undefined') {
-            console.log('🟡 Loading employee data from Supabase...');
+        if (typeof supabase !== "undefined") {
+            console.log("🟡 Loading employee data from Supabase...");
 
-            const { data, error } = await supabase.rpc('get_all_employees');
+            const { data, error } = await supabase.rpc("get_all_employees");
             if (error) throw error;
 
             if (Array.isArray(data)) {
                 const employeeData = {};
-                data.forEach(emp => {
+                data.forEach((emp) => {
                     employeeData[emp.employee_id] = emp.name;
                 });
 
                 authData = employeeData;
-                console.log(`✅ Loaded ${Object.keys(authData).length} employees from Supabase`);
+                console.log(
+                    `✅ Loaded ${Object.keys(authData).length} employees from Supabase`,
+                );
                 return;
             } else {
-                console.log('⚠️ Unexpected response from Supabase:', data);
+                console.log("⚠️ Unexpected response from Supabase:", data);
             }
         }
-        throw new Error('Supabase unavailable or returned no data');
+        throw new Error("Supabase unavailable or returned no data");
     } catch (err) {
-        console.warn('🔻 Supabase load failed, using fallback:', err);
+        console.warn("🔻 Supabase load failed, using fallback:", err);
 
         try {
-            const response = await fetch('auth_ids.json');
-            if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+            const response = await fetch("auth_ids.json");
+            if (!response.ok)
+                throw new Error(`Fetch failed: ${response.status}`);
             const fallback = await response.json();
             authData = fallback;
-            console.log(`✅ Fallback JSON loaded: ${Object.keys(authData).length} employees`);
+            console.log(
+                `✅ Fallback JSON loaded: ${Object.keys(authData).length} employees`,
+            );
         } catch (jsonErr) {
-            console.error('❌ Failed loading fallback JSON too:', jsonErr);
+            console.error("❌ Failed loading fallback JSON too:", jsonErr);
             authData = {
-                'M10323': 'VAIDEHI PAWAR',
-                'M20052': 'ANIKET CHENDAGE',
-                'M19003': 'MAHESH PATIL'
+                M10323: "VAIDEHI PAWAR",
+                M20052: "ANIKET CHENDAGE",
+                M19003: "MAHESH PATIL",
             };
-            console.log('🚨 Using hardcoded fallback data');
+            console.log("🚨 Using hardcoded fallback data");
         }
     }
 }
 
-
 /**
  * Validate employee login credentials
  * Checks if the entered employee ID exists in auth data
- * 
+ *
  * @param {string} employeeId - Employee ID entered by user
  * @returns {Object|null} Employee data if valid, null if invalid
  */
 async function validateEmployee(employeeId) {
     const normalizedId = employeeId.toUpperCase().trim();
-    console.log('🔍 Validating ID via Supabase:', normalizedId);
+    console.log("🔍 Validating ID via Supabase:", normalizedId);
 
-    const { data, error } = await supabase.rpc('validate_employee_login', {
-        employee_id_input: normalizedId
+    const { data, error } = await supabase.rpc("validate_employee_login", {
+        employee_id_input: normalizedId,
     });
 
     if (error) {
-        console.error('❌ Supabase validation error:', error);
+        console.error("❌ Supabase validation error:", error);
         return null;
     }
 
     if (data?.success && data.employee) {
-        console.log('✅ Authenticated:', data.employee);
+        console.log("✅ Authenticated:", data.employee);
         return {
             id: data.employee.id,
-            name: data.employee.name
+            name: data.employee.name,
         };
     }
 
-    console.warn('❌ Employee not found:', data?.message);
+    console.warn("❌ Employee not found:", data?.message);
     return null;
 }
-
 
 /**
  * Handle employee login form submission
@@ -125,10 +128,10 @@ async function validateEmployee(employeeId) {
  */
 async function handleEmployeeLogin(event) {
     event.preventDefault();
-    const input = document.getElementById('employeeId');
+    const input = document.getElementById("employeeId");
     const id = input.value.trim().toUpperCase();
     if (!id) {
-        showLoginError('Please enter your Employee ID.');
+        showLoginError("Please enter your Employee ID.");
         return;
     }
 
@@ -138,26 +141,26 @@ async function handleEmployeeLogin(event) {
         currentUser = employee;
         showMainApp();
         hideLoginError();
-        input.value = '';
+        input.value = "";
 
-        document.getElementById('userInfo').textContent = `Welcome, ${employee.name}`;
+        document.getElementById("userInfo").textContent =
+            `Welcome, ${employee.name}`;
         listenForProjects();
         checkUpcomingDeadlines();
     } else {
-        showLoginError('Invalid Employee ID.');
+        showLoginError("Invalid Employee ID.");
         input.focus();
         input.select();
     }
 }
-
 
 /**
  * Show the main application interface
  * Hides login screen and displays the project tracker
  */
 function showMainApp() {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("mainApp").style.display = "block";
 }
 
 /**
@@ -165,9 +168,9 @@ function showMainApp() {
  * Displays login modal and hides main app
  */
 function showLoginScreen() {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'none';
-    document.getElementById('employeeId').value = '';
+    document.getElementById("loginScreen").style.display = "flex";
+    document.getElementById("mainApp").style.display = "none";
+    document.getElementById("employeeId").value = "";
 }
 
 /**
@@ -175,16 +178,16 @@ function showLoginScreen() {
  * @param {string} message - Error message to display
  */
 function showLoginError(message) {
-    const errorDiv = document.getElementById('loginError');
+    const errorDiv = document.getElementById("loginError");
     errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
+    errorDiv.style.display = "block";
 }
 
 /**
  * Hide login error message
  */
 function hideLoginError() {
-    document.getElementById('loginError').style.display = 'none';
+    document.getElementById("loginError").style.display = "none";
 }
 
 // ===== SUPABASE DATABASE OPERATIONS =====
@@ -193,7 +196,7 @@ function hideLoginError() {
  * Real-time Supabase listener for projects table
  * Sets up live data synchronization with Supabase
  * Automatically updates UI when database changes occur
- * 
+ *
  * DEBUGGING: If projects don't load, check:
  * - Supabase config in index.html
  * - Network connectivity
@@ -205,13 +208,14 @@ async function listenForProjects() {
 
     // Set up real-time subscription
     supabase
-        .channel('projects')
-        .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'projects' }, 
+        .channel("projects")
+        .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "projects" },
             (payload) => {
-                console.log('Change received!', payload);
+                console.log("Change received!", payload);
                 loadProjects(); // Reload projects when changes occur
-            }
+            },
         )
         .subscribe();
 }
@@ -224,16 +228,16 @@ async function listenForProjects() {
 async function loadProjects() {
     try {
         const { data, error } = await supabase
-            .from('projects')
-            .select('*')
-            .order('createdat', { ascending: false });
+            .from("projects")
+            .select("*")
+            .order("createdat", { ascending: false });
 
         if (error) {
-            console.error('Error loading projects:', error);
+            console.error("Error loading projects:", error);
             return;
         }
 
-        projects = data.map(project => {
+        projects = data.map((project) => {
             // Ensure current project stage is set for existing projects
             if (!project.currentprojectstage) {
                 project.currentprojectstage = getCurrentProjectStage(project);
@@ -249,16 +253,16 @@ async function loadProjects() {
         renderProjects();
         updateStats();
     } catch (error) {
-        console.error('Error in loadProjects:', error);
+        console.error("Error in loadProjects:", error);
     }
 }
 
 /**
  * Add or update a project in Supabase database
  * Handles both new project creation and existing project updates
- * 
+ *
  * @param {Object} project - Project object with all required fields
- * 
+ *
  * DEBUGGING: If save fails, check:
  * - Project object has all required fields
  * - Supabase write permissions
@@ -281,22 +285,21 @@ async function upsertProject(project) {
             bu: project.bu,
             stages: project.stages,
             currentprojectstage: project.currentProjectStage,
-            createdat: project.createdAt || new Date().toISOString()
+            createdat: project.createdAt || new Date().toISOString(),
         };
 
         const { data, error } = await supabase
-            .from('projects')
-            .upsert(dbProject, { onConflict: 'id' });
+            .from("projects")
+            .upsert(dbProject, { onConflict: "id" });
 
         if (error) {
-            console.error('Error saving project:', error);
+            console.error("Error saving project:", error);
             alert("Failed to save project: " + error.message);
         } else {
-            console.log('Project saved successfully');
+            console.log("Project saved successfully");
         }
-    }
-    catch (error) {
-        console.error('Error saving project:', error);
+    } catch (error) {
+        console.error("Error saving project:", error);
         alert("Failed to save project: " + error.message);
     }
 }
@@ -306,20 +309,19 @@ async function upsertProject(project) {
  * @param {string|number} id - Project ID to delete
  */
 async function deleteProject(id) {
-    if (confirm('Are you sure you want to delete this project?')) {
+    if (confirm("Are you sure you want to delete this project?")) {
         try {
             const { error } = await supabase
-                .from('projects')
+                .from("projects")
                 .delete()
-                .eq('id', id);
+                .eq("id", id);
 
             if (error) {
-                console.error('Error deleting project:', error);
+                console.error("Error deleting project:", error);
                 alert("Failed to delete project: " + error.message);
             }
-        }
-        catch (error) {
-            console.error('Error deleting project:', error);
+        } catch (error) {
+            console.error("Error deleting project:", error);
             alert("Failed to delete project: " + error.message);
         }
     }
@@ -329,11 +331,11 @@ async function deleteProject(id) {
  * Update stage completion status and OTDR data immediately
  * Handles toggle switch changes in timeline view
  * Updates Supabase, recalculates progress, and syncs OTDR data
- * 
+ *
  * @param {string|number} projectId - Unique project identifier
  * @param {string} stage - Stage name (e.g., 'mechanical-design')
  * @param {boolean} isCompleted - New completion status
- * 
+ *
  * DEBUGGING: If toggle doesn't work, check:
  * - Admin mode is enabled for write access
  * - Project exists in database
@@ -341,7 +343,7 @@ async function deleteProject(id) {
  * - Network connectivity for OTDR update
  */
 async function updateStageCompletion(projectId, stage, isCompleted) {
-    const project = projects.find(p => p.id == projectId);
+    const project = projects.find((p) => p.id == projectId);
     if (project) {
         if (!project.stages) {
             project.stages = {};
@@ -351,7 +353,9 @@ async function updateStageCompletion(projectId, stage, isCompleted) {
         }
 
         project.stages[stage].completed = isCompleted;
-        project.stages[stage].completedTimestamp = isCompleted ? new Date().toISOString() : 'Yet to be completed';
+        project.stages[stage].completedTimestamp = isCompleted
+            ? new Date().toISOString()
+            : "Yet to be completed";
 
         // Update current project stage based on completed toggles
         project.currentProjectStage = getCurrentProjectStage(project);
@@ -373,12 +377,21 @@ async function updateStageCompletion(projectId, stage, isCompleted) {
 function getInUseStages(project) {
     if (!project.stages) return [];
 
-    const allStages = ['mechanical-design', 'electrical-design', 'manufacturing', 'wiring', 'assembly', 'controls', 'dispatch', 'installation'];
+    const allStages = [
+        "mechanical-design",
+        "electrical-design",
+        "manufacturing",
+        "wiring",
+        "assembly",
+        "controls",
+        "dispatch",
+        "installation",
+    ];
     const inUseStages = [];
 
-    allStages.forEach(stageName => {
+    allStages.forEach((stageName) => {
         const stage = project.stages[stageName];
-        if (stage && stage.person && stage.person.trim() !== '') {
+        if (stage && stage.person && stage.person.trim() !== "") {
             inUseStages.push(stageName);
         }
     });
@@ -389,7 +402,7 @@ function getInUseStages(project) {
 // Determine current project stage based on completed toggles
 function getCurrentProjectStage(project) {
     const inUseStages = getInUseStages(project);
-    if (inUseStages.length === 0) return 'mechanical-design';
+    if (inUseStages.length === 0) return "mechanical-design";
 
     // Find the last completed stage
     let currentStage = inUseStages[0];
@@ -415,10 +428,10 @@ function getCurrentProjectStage(project) {
 
 // Get current due date based on current project stage
 function getCurrentDueDate(project) {
-    if (!project.stages || !project.currentProjectStage) return 'Not set';
+    if (!project.stages || !project.currentProjectStage) return "Not set";
 
     const stage = project.stages[project.currentProjectStage];
-    return stage && stage.dueDate ? stage.dueDate : 'Not set';
+    return stage && stage.dueDate ? stage.dueDate : "Not set";
 }
 
 // Check if a stage is overdue
@@ -429,11 +442,11 @@ function isStageOverdue(stage) {
 
 // Get all overdue projects based on stage deadlines
 function getOverdueProjects() {
-    return projects.filter(project => {
+    return projects.filter((project) => {
         if (!project.stages) return false;
 
         const inUseStages = getInUseStages(project);
-        return inUseStages.some(stageName => {
+        return inUseStages.some((stageName) => {
             const stage = project.stages[stageName];
             return stage && isStageOverdue(stage);
         });
@@ -441,12 +454,12 @@ function getOverdueProjects() {
 }
 
 function renderProjects() {
-    const grid = document.getElementById('projectGrid');
+    const grid = document.getElementById("projectGrid");
     if (!grid) {
-        console.error('Project grid element not found');
+        console.error("Project grid element not found");
         return;
     }
-    
+
     const filteredProjects = getFilteredProjects();
 
     // Sort projects by creation date (newest first)
@@ -456,7 +469,7 @@ function renderProjects() {
         return dateB.getTime() - dateA.getTime();
     });
 
-    grid.innerHTML = '';
+    grid.innerHTML = "";
     sortedProjects.forEach((project) => {
         const projectCard = createProjectCard(project);
         if (projectCard) {
@@ -466,10 +479,11 @@ function renderProjects() {
 }
 
 function createProjectCard(project) {
-    const card = document.createElement('div');
+    const card = document.createElement("div");
     card.className = `project-card priority-${project.priority} fade-in`;
 
-    const currentStage = project.currentProjectStage || project.currentprojectstage || 'design';
+    const currentStage =
+        project.currentProjectStage || project.currentprojectstage || "design";
     const currentDueDate = getCurrentDueDate(project);
 
     card.innerHTML = `
@@ -487,76 +501,94 @@ function createProjectCard(project) {
             </div>
             <div class="meta-item">
                 <span class="meta-icon">⚡</span>
-                <span>${currentStage.replace(/-/g, ' ').toUpperCase()}</span>
+                <span>${currentStage.replace(/-/g, " ").toUpperCase()}</span>
             </div>
             <div class="meta-item">
                 <span class="meta-icon">🏢</span>
-                <span>${project.bu ? project.bu.toUpperCase() : 'N/A'}</span>
+                <span>${project.bu ? project.bu.toUpperCase() : "N/A"}</span>
             </div>
             <div class="meta-item">
                 <span class="meta-icon">📅</span>
-                <span>Due: ${currentDueDate !== 'Not set' ? formatDate(currentDueDate) : 'Not set'}</span>
+                <span>Due: ${currentDueDate !== "Not set" ? formatDate(currentDueDate) : "Not set"}</span>
             </div>
         </div>
         <div class="progress-bar">
             <div class="progress-fill" style="width: ${project.progress}%"></div>
         </div>
-        ${project.remarks ? `<div class="project-remarks"><strong>Remarks:</strong> ${project.remarks}</div>` : ''}
+        ${project.remarks ? `<div class="project-remarks"><strong>Remarks:</strong> ${project.remarks}</div>` : ""}
         <div class="project-actions">
             <button class="btn btn-small btn-info" onclick="showTimeline(${project.id})">📅 Timeline</button>
-            ${isAdminMode ? `
+            ${
+                isAdminMode
+                    ? `
                 <button class="btn btn-small btn-secondary" onclick="editProject(${project.id})">Edit</button>
                 <button class="btn btn-small btn-danger" onclick="deleteProject(${project.id})">Delete</button>
-            ` : ''}
+            `
+                    : ""
+            }
         </div>
     `;
     return card;
 }
 
 function getFilteredProjects() {
-    const statusFilter = document.getElementById('filterStatus').value;
-    const priorityFilter = document.getElementById('filterPriority').value;
-    const projectTypeFilter = document.getElementById('filterProjectType').value;
-    const buFilter = document.getElementById('filterBU').value;
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById("filterStatus").value;
+    const priorityFilter = document.getElementById("filterPriority").value;
+    const projectTypeFilter =
+        document.getElementById("filterProjectType").value;
+    const buFilter = document.getElementById("filterBU").value;
+    const searchTerm = document
+        .getElementById("searchInput")
+        .value.toLowerCase();
 
     return projects.filter((project) => {
         const projectType = project.projecttype || project.projectType;
         const matchesStatus = !statusFilter || project.status === statusFilter;
-        const matchesPriority = !priorityFilter || project.priority === priorityFilter;
-        const matchesProjectType = !projectTypeFilter || projectType === projectTypeFilter;
-        const matchesBU = !buFilter || buFilter === 'other' || project.bu === buFilter;
-        const matchesSearch = !searchTerm ||
+        const matchesPriority =
+            !priorityFilter || project.priority === priorityFilter;
+        const matchesProjectType =
+            !projectTypeFilter || projectType === projectTypeFilter;
+        const matchesBU =
+            !buFilter || buFilter === "other" || project.bu === buFilter;
+        const matchesSearch =
+            !searchTerm ||
             project.name.toLowerCase().includes(searchTerm) ||
             project.description.toLowerCase().includes(searchTerm) ||
             project.assignee.toLowerCase().includes(searchTerm);
 
-        return matchesStatus && matchesPriority && matchesProjectType && matchesBU && matchesSearch;
+        return (
+            matchesStatus &&
+            matchesPriority &&
+            matchesProjectType &&
+            matchesBU &&
+            matchesSearch
+        );
     });
 }
 
 function updateStats() {
     const total = projects.length;
-    const active = projects.filter((p) => p.status === 'active').length;
-    const completed = projects.filter((p) => p.status === 'completed').length;
+    const active = projects.filter((p) => p.status === "active").length;
+    const completed = projects.filter((p) => p.status === "completed").length;
     const overdue = getOverdueProjects().length;
 
-    document.getElementById('totalProjects').textContent = total.toString();
-    document.getElementById('activeProjects').textContent = active.toString();
-    document.getElementById('completedProjects').textContent = completed.toString();
-    document.getElementById('overdueProjects').textContent = overdue.toString();
+    document.getElementById("totalProjects").textContent = total.toString();
+    document.getElementById("activeProjects").textContent = active.toString();
+    document.getElementById("completedProjects").textContent =
+        completed.toString();
+    document.getElementById("overdueProjects").textContent = overdue.toString();
 }
 
 function calculateProgress(status, project) {
-    if (status === 'completed') return 100;
-    if (status === 'yet-to-start') return 0;
+    if (status === "completed") return 100;
+    if (status === "yet-to-start") return 0;
 
     const inUseStages = getInUseStages(project);
     if (inUseStages.length === 0) return 0;
 
     // Count completed stages
     let completedStages = 0;
-    inUseStages.forEach(stageName => {
+    inUseStages.forEach((stageName) => {
         const stage = project.stages[stageName];
         if (stage && stage.completed) {
             completedStages++;
@@ -569,71 +601,88 @@ function calculateProgress(status, project) {
 }
 
 function openModal(project = null) {
-    const modal = document.getElementById('projectModal');
-    const title = document.getElementById('modalTitle');
-    const form = document.getElementById('projectForm');
+    const modal = document.getElementById("projectModal");
+    const title = document.getElementById("modalTitle");
+    const form = document.getElementById("projectForm");
 
     if (project) {
-        title.textContent = 'Edit Project';
+        title.textContent = "Edit Project";
         editingId = project.id;
-        document.getElementById('projectName').value = project.name;
-        document.getElementById('projectDescription').value = project.description;
-        document.getElementById('projectStatus').value = project.status;
-        document.getElementById('projectAssignee').value = project.assignee;
-        document.getElementById('projectRemarks').value = project.remarks || '';
-        document.getElementById('projectType').value = project.projecttype || project.projectType || '';
-        document.getElementById('projectBU').value = project.bu || '';
+        document.getElementById("projectName").value = project.name;
+        document.getElementById("projectDescription").value =
+            project.description;
+        document.getElementById("projectStatus").value = project.status;
+        document.getElementById("projectAssignee").value = project.assignee;
+        document.getElementById("projectRemarks").value = project.remarks || "";
+        document.getElementById("projectType").value =
+            project.projecttype || project.projectType || "";
+        document.getElementById("projectBU").value = project.bu || "";
 
         // Populate stage fields if they exist
         if (project.stages) {
-            document.getElementById('mechanicalDesignPerson').value = project.stages['mechanical-design']?.person || '';
-            document.getElementById('mechanicalDesignTime').value = project.stages['mechanical-design']?.dueDate || '';
-            document.getElementById('electricalDesignPerson').value = project.stages['electrical-design']?.person || '';
-            document.getElementById('electricalDesignTime').value = project.stages['electrical-design']?.dueDate || '';
-            document.getElementById('manufacturingPerson').value = project.stages['manufacturing']?.person || '';
-            document.getElementById('manufacturingTime').value = project.stages['manufacturing']?.dueDate || '';
-            document.getElementById('wiringPerson').value = project.stages['wiring']?.person || '';
-            document.getElementById('wiringTime').value = project.stages['wiring']?.dueDate || '';
-            document.getElementById('assemblyPerson').value = project.stages['assembly']?.person || '';
-            document.getElementById('assemblyTime').value = project.stages['assembly']?.dueDate || '';
-            document.getElementById('controlsPerson').value = project.stages['controls']?.person || '';
-            document.getElementById('controlsTime').value = project.stages['controls']?.dueDate || '';
-            document.getElementById('dispatchPerson').value = project.stages['dispatch']?.person || '';
-            document.getElementById('dispatchTime').value = project.stages['dispatch']?.dueDate || '';
-            document.getElementById('installationPerson').value = project.stages['installation']?.person || '';
-            document.getElementById('installationTime').value = project.stages['installation']?.dueDate || '';
+            document.getElementById("mechanicalDesignPerson").value =
+                project.stages["mechanical-design"]?.person || "";
+            document.getElementById("mechanicalDesignTime").value =
+                project.stages["mechanical-design"]?.dueDate || "";
+            document.getElementById("electricalDesignPerson").value =
+                project.stages["electrical-design"]?.person || "";
+            document.getElementById("electricalDesignTime").value =
+                project.stages["electrical-design"]?.dueDate || "";
+            document.getElementById("manufacturingPerson").value =
+                project.stages["manufacturing"]?.person || "";
+            document.getElementById("manufacturingTime").value =
+                project.stages["manufacturing"]?.dueDate || "";
+            document.getElementById("wiringPerson").value =
+                project.stages["wiring"]?.person || "";
+            document.getElementById("wiringTime").value =
+                project.stages["wiring"]?.dueDate || "";
+            document.getElementById("assemblyPerson").value =
+                project.stages["assembly"]?.person || "";
+            document.getElementById("assemblyTime").value =
+                project.stages["assembly"]?.dueDate || "";
+            document.getElementById("controlsPerson").value =
+                project.stages["controls"]?.person || "";
+            document.getElementById("controlsTime").value =
+                project.stages["controls"]?.dueDate || "";
+            document.getElementById("dispatchPerson").value =
+                project.stages["dispatch"]?.person || "";
+            document.getElementById("dispatchTime").value =
+                project.stages["dispatch"]?.dueDate || "";
+            document.getElementById("installationPerson").value =
+                project.stages["installation"]?.person || "";
+            document.getElementById("installationTime").value =
+                project.stages["installation"]?.dueDate || "";
         }
-    }
-    else {
-        title.textContent = 'Add New Project';
+    } else {
+        title.textContent = "Add New Project";
         editingId = null;
         form.reset();
-        document.getElementById('projectType').value = '';
-        document.getElementById('projectBU').value = '';
+        document.getElementById("projectType").value = "";
+        document.getElementById("projectBU").value = "";
 
         // Reset stage fields
-        document.getElementById('mechanicalDesignPerson').value = '';
-        document.getElementById('mechanicalDesignTime').value = '';
-        document.getElementById('electricalDesignPerson').value = '';
-        document.getElementById('electricalDesignTime').value = '';
-        document.getElementById('manufacturingPerson').value = '';
-        document.getElementById('manufacturingTime').value = '';
-        document.getElementById('wiringPerson').value = '';
-        document.getElementById('wiringTime').value = '';
-        document.getElementById('assemblyPerson').value = '';
-        document.getElementById('assemblyTime').value = '';
-        document.getElementById('controlsPerson').value = '';
-        document.getElementById('controlsTime').value = '';
-        document.getElementById('dispatchPerson').value = '';
-        document.getElementById('dispatchTime').value = '';
-        document.getElementById('installationPerson').value = '';
-        document.getElementById('installationTime').value = '';
+        document.getElementById("mechanicalDesignPerson").value = "";
+        document.getElementById("mechanicalDesignTime").value = "";
+        document.getElementById("electricalDesignPerson").value = "";
+        document.getElementById("electricalDesignTime").value = "";
+        document.getElementById("manufacturingPerson").value = "";
+        document.getElementById("manufacturingTime").value = "";
+        document.getElementById("wiringPerson").value = "";
+        document.getElementById("wiringTime").value = "";
+        document.getElementById("assemblyPerson").value = "";
+        document.getElementById("assemblyTime").value = "";
+        document.getElementById("controlsPerson").value = "";
+        document.getElementById("controlsTime").value = "";
+        document.getElementById("dispatchPerson").value = "";
+        document.getElementById("dispatchTime").value = "";
+        document.getElementById("installationPerson").value = "";
+        document.getElementById("installationTime").value = "";
     }
-    modal.style.display = 'flex';
+    modal.style.display = "flex";
 }
 
 function closeModal() {
-    document.getElementById('projectModal').style.display = 'none';
+    document.getElementById("projectModal").style.display = "none";
     editingId = null;
 }
 
@@ -649,23 +698,23 @@ function filterProjects() {
 }
 
 function filterByStatus(status) {
-    document.getElementById('filterStatus').value = status;
+    document.getElementById("filterStatus").value = status;
     filterProjects();
 }
 
 function filterByOverdue() {
     // Reset other filters and show only overdue projects
-    document.getElementById('filterStatus').value = '';
-    document.getElementById('filterPriority').value = '';
-    document.getElementById('filterProjectType').value = '';
-    document.getElementById('filterBU').value = '';
-    document.getElementById('searchInput').value = '';
+    document.getElementById("filterStatus").value = "";
+    document.getElementById("filterPriority").value = "";
+    document.getElementById("filterProjectType").value = "";
+    document.getElementById("filterBU").value = "";
+    document.getElementById("searchInput").value = "";
 
     // Filter to show only overdue projects
-    const grid = document.getElementById('projectGrid');
+    const grid = document.getElementById("projectGrid");
     const overdueProjects = getOverdueProjects();
 
-    grid.innerHTML = '';
+    grid.innerHTML = "";
     overdueProjects.forEach((project) => {
         const projectCard = createProjectCard(project);
         grid.appendChild(projectCard);
@@ -674,11 +723,11 @@ function filterByOverdue() {
 
 function clearAllFilters() {
     // Reset all filters to show all projects
-    document.getElementById('filterStatus').value = '';
-    document.getElementById('filterPriority').value = '';
-    document.getElementById('filterProjectType').value = '';
-    document.getElementById('filterBU').value = '';
-    document.getElementById('searchInput').value = '';
+    document.getElementById("filterStatus").value = "";
+    document.getElementById("filterPriority").value = "";
+    document.getElementById("filterProjectType").value = "";
+    document.getElementById("filterBU").value = "";
+    document.getElementById("searchInput").value = "";
 
     // Re-render all projects
     renderProjects();
@@ -686,88 +735,107 @@ function clearAllFilters() {
 
 function exportData() {
     if (projects.length === 0) {
-        alert('No projects to export');
+        alert("No projects to export");
         return;
     }
 
-    const headers = ['ID', 'Name', 'Description', 'Status', 'Project Stage', 'Project Manager', 'Progress (%)', 'Remarks', 'Project Type', 'BU', 'Created At'];
-
-    const csvRows = [
-        headers.join(','),
-        ...projects.map((project) => [
-            project.id,
-            `"${project.name.replace(/"/g, '""')}"`,
-            `"${project.description.replace(/"/g, '""')}"`,
-            project.status,
-            project.priority,
-            `"${project.assignee.replace(/"/g, '""')}"`,
-            project.progress,
-            `"${(project.remarks || '').replace(/"/g, '""')}"`,
-            project.projecttype || project.projectType || '',
-            project.bu || '',
-            project.createdat || project.createdAt
-        ].join(','))
+    const headers = [
+        "ID",
+        "Name",
+        "Description",
+        "Status",
+        "Project Stage",
+        "Project Manager",
+        "Progress (%)",
+        "Remarks",
+        "Project Type",
+        "BU",
+        "Created At",
     ];
 
-    const csvContent = csvRows.join('\n');
-    const dataBlob = new Blob([csvContent], { type: 'text/csv' });
+    const csvRows = [
+        headers.join(","),
+        ...projects.map((project) =>
+            [
+                project.id,
+                `"${project.name.replace(/"/g, '""')}"`,
+                `"${project.description.replace(/"/g, '""')}"`,
+                project.status,
+                project.priority,
+                `"${project.assignee.replace(/"/g, '""')}"`,
+                project.progress,
+                `"${(project.remarks || "").replace(/"/g, '""')}"`,
+                project.projecttype || project.projectType || "",
+                project.bu || "",
+                project.createdat || project.createdAt,
+            ].join(","),
+        ),
+    ];
+
+    const csvContent = csvRows.join("\n");
+    const dataBlob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = 'projects_export.csv';
+    link.download = "projects_export.csv";
     link.click();
 }
 
 function formatDate(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
     });
 }
 
 function showAdminLogin() {
-    document.getElementById('adminModal').style.display = 'flex';
-    document.getElementById('adminPassword').value = '';
+    document.getElementById("adminModal").style.display = "flex";
+    document.getElementById("adminPassword").value = "";
 }
 
 function closeAdminModal() {
-    document.getElementById('adminModal').style.display = 'none';
+    document.getElementById("adminModal").style.display = "none";
 }
 
 function logoutAdmin() {
     isAdminMode = false;
-    document.getElementById('adminOnlyControls').style.display = 'none';
-    const adminBtn = document.getElementById('adminLoginBtn');
-    adminBtn.textContent = 'Admin Login';
-    adminBtn.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
+    document.getElementById("adminOnlyControls").style.display = "none";
+    const adminBtn = document.getElementById("adminLoginBtn");
+    adminBtn.textContent = "Admin Login";
+    adminBtn.style.background = "linear-gradient(135deg, #dc2626, #b91c1c)";
     adminBtn.onclick = showAdminLogin;
     renderProjects();
 }
 
 function showTimeline(projectId = null) {
-    const modal = document.getElementById('timelineModal');
-    const content = document.getElementById('timelineContent');
+    const modal = document.getElementById("timelineModal");
+    const content = document.getElementById("timelineContent");
 
     if (projectId) {
-        const project = projects.find(p => p.id == projectId);
+        const project = projects.find((p) => p.id == projectId);
         if (project && project.stages) {
             const inUseStages = getInUseStages(project);
             const stageLabels = {
-                'mechanical-design': 'Mechanical Design',
-                'electrical-design': 'Electrical Design', 
-                'manufacturing': 'Manufacturing',
-                'wiring': 'Wiring',
-                'assembly': 'Assembly',
-                'controls': 'Controls',
-                'dispatch': 'Ready for Dispatch',
-                'installation': 'Installation & Commissioning'
+                "mechanical-design": "Mechanical Design",
+                "electrical-design": "Electrical Design",
+                manufacturing: "Manufacturing",
+                wiring: "Wiring",
+                assembly: "Assembly",
+                controls: "Controls",
+                dispatch: "Ready for Dispatch",
+                installation: "Installation & Commissioning",
             };
 
-            let stagesHTML = '';
+            let stagesHTML = "";
             inUseStages.forEach((stageName, index) => {
-                stagesHTML += generateStageHTML(stageName, index + 1, stageLabels[stageName], project);
+                stagesHTML += generateStageHTML(
+                    stageName,
+                    index + 1,
+                    stageLabels[stageName],
+                    project,
+                );
             });
 
             content.innerHTML = `
@@ -821,14 +889,14 @@ function showTimeline(projectId = null) {
         `;
     }
 
-    modal.style.display = 'flex';
+    modal.style.display = "flex";
 }
 
 function generateStageHTML(stageName, number, title, project) {
     const stage = project.stages[stageName] || {};
     const isCompleted = stage.completed || false;
     const isOverdue = isStageOverdue(stage);
-    const toggleDisabled = !isAdminMode ? 'disabled' : '';
+    const toggleDisabled = !isAdminMode ? "disabled" : "";
 
     return `
         <div class="timeline-stage">
@@ -837,285 +905,379 @@ function generateStageHTML(stageName, number, title, project) {
                 <div class="stage-completion">
                     <h3>${title}</h3>
                     <label class="toggle-switch ${toggleDisabled}">
-                        <input type="checkbox" ${isCompleted ? 'checked' : ''} 
+                        <input type="checkbox" ${isCompleted ? "checked" : ""} 
                                onchange="updateStageCompletion(${project.id}, '${stageName}', this.checked)"
-                               ${!isAdminMode ? 'disabled' : ''}>
+                               ${!isAdminMode ? "disabled" : ""}>
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <p>Person: ${stage.person || 'Not assigned'}</p>
-                <p>Due Date: ${stage.dueDate ? formatDate(stage.dueDate) : 'Not set'}</p>
-                ${isCompleted ? `<p class="completion-status">✅ Completed: ${stage.completedTimestamp ? formatDate(stage.completedTimestamp) : 'N/A'}</p>` : 
-                  isOverdue ? `<p class="completion-status">⚠️ Overdue</p>` : 
-                  `<p class="completion-status">⏳ In Progress</p>`}
+                <p>Person: ${stage.person || "Not assigned"}</p>
+                <p>Due Date: ${stage.dueDate ? formatDate(stage.dueDate) : "Not set"}</p>
+                ${
+                    isCompleted
+                        ? `<p class="completion-status">✅ Completed: ${stage.completedTimestamp ? formatDate(stage.completedTimestamp) : "N/A"}</p>`
+                        : isOverdue
+                          ? `<p class="completion-status">⚠️ Overdue</p>`
+                          : `<p class="completion-status">⏳ In Progress</p>`
+                }
             </div>
         </div>
     `;
 }
 
 function closeTimelineModal() {
-    document.getElementById('timelineModal').style.display = 'none';
+    document.getElementById("timelineModal").style.display = "none";
 }
 
 function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const mainContent = document.querySelector('.main-content');
+    const sidebar = document.getElementById("sidebar");
+    const mainContent = document.querySelector(".main-content");
 
-    sidebar.classList.toggle('collapsed');
-    mainContent.classList.toggle('sidebar-collapsed');
+    sidebar.classList.toggle("collapsed");
+    mainContent.classList.toggle("sidebar-collapsed");
 }
 
 // Form submission handler and modal logic
-document.addEventListener('DOMContentLoaded', function () {
-    console.log('🚀 DOM loaded, initializing application...');
-    
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("🚀 DOM loaded, initializing application...");
+
     // Check if all required elements exist
-    const requiredElements = ['loginScreen', 'mainApp', 'employeeLoginForm', 'employeeId', 'loginError'];
-    const missingElements = requiredElements.filter(id => !document.getElementById(id));
-    
+    const requiredElements = [
+        "loginScreen",
+        "mainApp",
+        "employeeLoginForm",
+        "employeeId",
+        "loginError",
+    ];
+    const missingElements = requiredElements.filter(
+        (id) => !document.getElementById(id),
+    );
+
     if (missingElements.length > 0) {
-        console.error('❌ Missing required DOM elements:', missingElements);
-        alert('Application initialization failed. Missing required elements: ' + missingElements.join(', '));
+        console.error("❌ Missing required DOM elements:", missingElements);
+        alert(
+            "Application initialization failed. Missing required elements: " +
+                missingElements.join(", "),
+        );
         return;
     }
 
-    console.log('✅ All required DOM elements found');
+    console.log("✅ All required DOM elements found");
 
     // Employee login form submission - attach listener first
-    const loginForm = document.getElementById('employeeLoginForm');
+    const loginForm = document.getElementById("employeeLoginForm");
     if (loginForm) {
-        loginForm.addEventListener('submit', handleEmployeeLogin);
-        console.log('✅ Login form event listener attached');
+        loginForm.addEventListener("submit", handleEmployeeLogin);
+        console.log("✅ Login form event listener attached");
     } else {
-        console.error('❌ Employee login form not found');
+        console.error("❌ Employee login form not found");
         return;
     }
 
     // Load authentication data and show login screen
-    loadAuthData().then(() => {
-        console.log('✅ Auth data loaded successfully, showing login screen');
-        showLoginScreen();
-    }).catch(error => {
-        console.error('❌ Failed to load auth data:', error);
-        showLoginScreen(); // Still show login screen with fallback data
-        showLoginError('System loaded with limited data. If login fails, please refresh the page.');
-    });
+    loadAuthData()
+        .then(() => {
+            console.log(
+                "✅ Auth data loaded successfully, showing login screen",
+            );
+            showLoginScreen();
+        })
+        .catch((error) => {
+            console.error("❌ Failed to load auth data:", error);
+            showLoginScreen(); // Still show login screen with fallback data
+            showLoginError(
+                "System loaded with limited data. If login fails, please refresh the page.",
+            );
+        });
 
-    document.getElementById('projectForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
+    document
+        .getElementById("projectForm")
+        .addEventListener("submit", async function (e) {
+            e.preventDefault();
 
-        // Validate required fields and convert to uppercase
-        const name = document.getElementById('projectName').value.trim().toUpperCase();
-        const description = document.getElementById('projectDescription').value.trim().toUpperCase();
-        const assignee = document.getElementById('projectAssignee').value.trim().toUpperCase();
-        const projectType = document.getElementById('projectType').value;
-        const bu = document.getElementById('projectBU').value;
+            // Validate required fields and convert to uppercase
+            const name = document
+                .getElementById("projectName")
+                .value.trim()
+                .toUpperCase();
+            const description = document
+                .getElementById("projectDescription")
+                .value.trim()
+                .toUpperCase();
+            const assignee = document
+                .getElementById("projectAssignee")
+                .value.trim()
+                .toUpperCase();
+            const projectType = document.getElementById("projectType").value;
+            const bu = document.getElementById("projectBU").value;
 
-        if (!name || !description || !assignee || !projectType || !bu) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        const status = document.getElementById('projectStatus').value;
-        const progress = calculateProgress(status, { stages: {} });
-
-        const formData = {
-            name: name,
-            description: description,
-            status: status,
-            priority: 'design',
-            assignee: assignee,
-            progress: progress,
-            remarks: document.getElementById('projectRemarks').value.toUpperCase() || '',
-            projectType: projectType,
-            bu: bu,
-            stages: {
-                'mechanical-design': {
-                    person: document.getElementById('mechanicalDesignPerson').value.toUpperCase() || '',
-                    dueDate: document.getElementById('mechanicalDesignTime').value || '',
-                    completed: false,
-                    completedTimestamp: 'Yet to be completed'
-                },
-                'electrical-design': {
-                    person: document.getElementById('electricalDesignPerson').value.toUpperCase() || '',
-                    dueDate: document.getElementById('electricalDesignTime').value || '',
-                    completed: false,
-                    completedTimestamp: 'Yet to be completed'
-                },
-                'manufacturing': {
-                    person: document.getElementById('manufacturingPerson').value.toUpperCase() || '',
-                    dueDate: document.getElementById('manufacturingTime').value || '',
-                    completed: false,
-                    completedTimestamp: 'Yet to be completed'
-                },
-                'wiring': {
-                    person: document.getElementById('wiringPerson').value.toUpperCase() || '',
-                    dueDate: document.getElementById('wiringTime').value || '',
-                    completed: false,
-                    completedTimestamp: 'Yet to be completed'
-                },
-                'assembly': {
-                    person: document.getElementById('assemblyPerson').value.toUpperCase() || '',
-                    dueDate: document.getElementById('assemblyTime').value || '',
-                    completed: false,
-                    completedTimestamp: 'Yet to be completed'
-                },
-                'controls': {
-                    person: document.getElementById('controlsPerson').value.toUpperCase() || '',
-                    dueDate: document.getElementById('controlsTime').value || '',
-                    completed: false,
-                    completedTimestamp: 'Yet to be completed'
-                },
-                'dispatch': {
-                    person: document.getElementById('dispatchPerson').value.toUpperCase() || '',
-                    dueDate: document.getElementById('dispatchTime').value || '',
-                    completed: false,
-                    completedTimestamp: 'Yet to be completed'
-                },
-                'installation': {
-                    person: document.getElementById('installationPerson').value.toUpperCase() || '',
-                    dueDate: document.getElementById('installationTime').value || '',
-                    completed: false,
-                    completedTimestamp: 'Yet to be completed'
-                }
+            if (!name || !description || !assignee || !projectType || !bu) {
+                alert("Please fill in all required fields");
+                return;
             }
-        };
 
-        let project;
-        if (editingId) {
-            const index = projects.findIndex((p) => p.id == editingId);
-            if (index !== -1) {
-                const existingProject = projects[index];
-                project = { ...existingProject, ...formData };
+            const status = document.getElementById("projectStatus").value;
+            const progress = calculateProgress(status, { stages: {} });
 
-                // Preserve existing stage completion status and timestamps
-                if (existingProject.stages) {
-                    Object.keys(project.stages).forEach(stageName => {
-                        if (existingProject.stages[stageName]) {
-                            project.stages[stageName].completed = existingProject.stages[stageName].completed;
-                            project.stages[stageName].completedTimestamp = existingProject.stages[stageName].completedTimestamp;
-                        }
-                    });
-                }
-
-                // Set current project stage based on completed toggles
-                project.currentProjectStage = getCurrentProjectStage(project);
-                // Recalculate progress based on new values
-                project.progress = calculateProgress(project.status, project);
-                projects[index] = project;
-            }
-        }
-```text
-
-        else {
-            project = {
-                id: Date.now(),
-                ...formData,
-                createdAt: new Date().toISOString()
+            const formData = {
+                name: name,
+                description: description,
+                status: status,
+                priority: "design",
+                assignee: assignee,
+                progress: progress,
+                remarks:
+                    document
+                        .getElementById("projectRemarks")
+                        .value.toUpperCase() || "",
+                projectType: projectType,
+                bu: bu,
+                stages: {
+                    "mechanical-design": {
+                        person:
+                            document
+                                .getElementById("mechanicalDesignPerson")
+                                .value.toUpperCase() || "",
+                        dueDate:
+                            document.getElementById("mechanicalDesignTime")
+                                .value || "",
+                        completed: false,
+                        completedTimestamp: "Yet to be completed",
+                    },
+                    "electrical-design": {
+                        person:
+                            document
+                                .getElementById("electricalDesignPerson")
+                                .value.toUpperCase() || "",
+                        dueDate:
+                            document.getElementById("electricalDesignTime")
+                                .value || "",
+                        completed: false,
+                        completedTimestamp: "Yet to be completed",
+                    },
+                    manufacturing: {
+                        person:
+                            document
+                                .getElementById("manufacturingPerson")
+                                .value.toUpperCase() || "",
+                        dueDate:
+                            document.getElementById("manufacturingTime")
+                                .value || "",
+                        completed: false,
+                        completedTimestamp: "Yet to be completed",
+                    },
+                    wiring: {
+                        person:
+                            document
+                                .getElementById("wiringPerson")
+                                .value.toUpperCase() || "",
+                        dueDate:
+                            document.getElementById("wiringTime").value || "",
+                        completed: false,
+                        completedTimestamp: "Yet to be completed",
+                    },
+                    assembly: {
+                        person:
+                            document
+                                .getElementById("assemblyPerson")
+                                .value.toUpperCase() || "",
+                        dueDate:
+                            document.getElementById("assemblyTime").value || "",
+                        completed: false,
+                        completedTimestamp: "Yet to be completed",
+                    },
+                    controls: {
+                        person:
+                            document
+                                .getElementById("controlsPerson")
+                                .value.toUpperCase() || "",
+                        dueDate:
+                            document.getElementById("controlsTime").value || "",
+                        completed: false,
+                        completedTimestamp: "Yet to be completed",
+                    },
+                    dispatch: {
+                        person:
+                            document
+                                .getElementById("dispatchPerson")
+                                .value.toUpperCase() || "",
+                        dueDate:
+                            document.getElementById("dispatchTime").value || "",
+                        completed: false,
+                        completedTimestamp: "Yet to be completed",
+                    },
+                    installation: {
+                        person:
+                            document
+                                .getElementById("installationPerson")
+                                .value.toUpperCase() || "",
+                        dueDate:
+                            document.getElementById("installationTime").value ||
+                            "",
+                        completed: false,
+                        completedTimestamp: "Yet to be completed",
+                    },
+                },
             };
-            // Set initial current project stage and progress
-            project.currentProjectStage = getCurrentProjectStage(project);
-            project.progress = calculateProgress(project.status, project);
-            projects.push(project);
-        }
 
-        try {
-            await upsertProject(project);
-            closeModal();
-            // Force a refresh of the projects list
-            renderProjects();
-            updateStats();
-        } catch (error) {
-            console.error('Error saving project:', error);
-            alert('Failed to save project. Please try again.');
-        }
-    });
+            let project;
+            if (editingId) {
+                const index = projects.findIndex((p) => p.id == editingId);
+                if (index !== -1) {
+                    const existingProject = projects[index];
+                    project = { ...existingProject, ...formData };
+
+                    // Preserve existing stage completion status and timestamps
+                    if (existingProject.stages) {
+                        Object.keys(project.stages).forEach((stageName) => {
+                            if (existingProject.stages[stageName]) {
+                                project.stages[stageName].completed =
+                                    existingProject.stages[stageName].completed;
+                                project.stages[stageName].completedTimestamp =
+                                    existingProject.stages[
+                                        stageName
+                                    ].completedTimestamp;
+                            }
+                        });
+                    }
+
+                    // Set current project stage based on completed toggles
+                    project.currentProjectStage =
+                        getCurrentProjectStage(project);
+                    // Recalculate progress based on new values
+                    project.progress = calculateProgress(
+                        project.status,
+                        project,
+                    );
+                    projects[index] = project;
+                }
+            } else {
+                project = {
+                    id: Date.now(),
+                    ...formData,
+                    createdAt: new Date().toISOString(),
+                };
+                // Set initial current project stage and progress
+                project.currentProjectStage = getCurrentProjectStage(project);
+                project.progress = calculateProgress(project.status, project);
+                projects.push(project);
+            }
+
+            try {
+                await upsertProject(project);
+                closeModal();
+                // Force a refresh of the projects list
+                renderProjects();
+                updateStats();
+            } catch (error) {
+                console.error("Error saving project:", error);
+                alert("Failed to save project. Please try again.");
+            }
+        });
 
     // Modal click outside to close
-    document.getElementById('projectModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeModal();
-        }
-    });
+    document
+        .getElementById("projectModal")
+        .addEventListener("click", function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
 
     // Admin form submission
-    document.getElementById('adminForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-        const password = document.getElementById('adminPassword').value;
-        if (password === 'mikro-admin') {
-            isAdminMode = true;
-            document.getElementById('adminOnlyControls').style.display = 'inline-block';
-            const adminBtn = document.getElementById('adminLoginBtn');
-            adminBtn.textContent = 'Admin Mode';
-            adminBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-            adminBtn.onclick = logoutAdmin;
-            closeAdminModal();
-            renderProjects();
-        }
-        else {
-            alert('Incorrect password');
-        }
-    });
+    document
+        .getElementById("adminForm")
+        .addEventListener("submit", function (e) {
+            e.preventDefault();
+            const password = document.getElementById("adminPassword").value;
+            if (password === "mikro-admin") {
+                isAdminMode = true;
+                document.getElementById("adminOnlyControls").style.display =
+                    "inline-block";
+                const adminBtn = document.getElementById("adminLoginBtn");
+                adminBtn.textContent = "Admin Mode";
+                adminBtn.style.background =
+                    "linear-gradient(135deg, #10b981, #059669)";
+                adminBtn.onclick = logoutAdmin;
+                closeAdminModal();
+                renderProjects();
+            } else {
+                alert("Incorrect password");
+            }
+        });
 
     // Close admin modal when clicking outside
-    document.getElementById('adminModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeAdminModal();
-        }
-    });
+    document
+        .getElementById("adminModal")
+        .addEventListener("click", function (e) {
+            if (e.target === this) {
+                closeAdminModal();
+            }
+        });
 
     // Close timeline modal when clicking outside
-    document.getElementById('timelineModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeTimelineModal();
-        }
-    });
+    document
+        .getElementById("timelineModal")
+        .addEventListener("click", function (e) {
+            if (e.target === this) {
+                closeTimelineModal();
+            }
+        });
 
     // Close OTDR modal when clicking outside
-    document.getElementById('otdrModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeOTDRModal();
-        }
-    });
+    document
+        .getElementById("otdrModal")
+        .addEventListener("click", function (e) {
+            if (e.target === this) {
+                closeOTDRModal();
+            }
+        });
 });
 
 // Real-time OTDR update via Supabase
-async function updateOTDRDataViaBackend(projectId, stageName, isCompleted, project) {
+async function updateOTDRDataViaBackend(
+    projectId,
+    stageName,
+    isCompleted,
+    project,
+) {
     const stage = project.stages[stageName];
-    if (!stage || !stage.person || stage.person.trim() === '') return;
+    if (!stage || !stage.person || stage.person.trim() === "") return;
 
     try {
-        const { data, error } = await supabase.rpc('update_otdr_data', {
+        const { data, error } = await supabase.rpc("update_otdr_data", {
             p_project_id: projectId.toString(),
             p_project_name: project.name,
             p_stage_name: stageName,
             p_due_date: stage.dueDate,
             p_completed: isCompleted,
-            p_completed_date: isCompleted ? new Date().toISOString().split('T')[0] : null
+            p_completed_date: isCompleted
+                ? new Date().toISOString().split("T")[0]
+                : null,
         });
 
         if (error) {
-            console.error('Failed to update OTDR data:', error);
+            console.error("Failed to update OTDR data:", error);
         } else {
             console.log(`OTDR data updated for ${stageName}:`, data);
         }
     } catch (error) {
-        console.error('Error updating OTDR data:', error);
+        console.error("Error updating OTDR data:", error);
     }
 }
 
 async function showOTDRModal() {
-    const modal = document.getElementById('otdrModal');
-    const content = document.getElementById('otdrContent');
+    const modal = document.getElementById("otdrModal");
+    const content = document.getElementById("otdrContent");
 
     if (!modal || !content) {
-        console.error('OTDR modal elements not found');
+        console.error("OTDR modal elements not found");
         return;
     }
 
     try {
         // Fetch OTDR stats from Supabase
-        const { data, error } = await supabase.rpc('get_otdr_stats');
+        const { data, error } = await supabase.rpc("get_otdr_stats");
         let otdrData = [];
 
         if (!error && data) {
@@ -1123,25 +1285,26 @@ async function showOTDRModal() {
         }
 
         const stageLabels = {
-            'mechanical-design': 'Mechanical Design',
-            'electrical-design': 'Electrical Design',
-            'manufacturing': 'Manufacturing', 
-            'wiring': 'Wiring',
-            'assembly': 'Assembly',
-            'controls': 'Controls',
-            'dispatch': 'Ready for Dispatch',
-            'installation': 'Installation and Commissioning'
+            "mechanical-design": "Mechanical Design",
+            "electrical-design": "Electrical Design",
+            manufacturing: "Manufacturing",
+            wiring: "Wiring",
+            assembly: "Assembly",
+            controls: "Controls",
+            dispatch: "Ready for Dispatch",
+            installation: "Installation and Commissioning",
         };
 
         let otdrHTML = '<div class="otdr-list">';
 
         if (otdrData.length === 0) {
-            otdrHTML += '<div class="otdr-item"><div class="otdr-stage-name">No OTDR data available</div></div>';
+            otdrHTML +=
+                '<div class="otdr-item"><div class="otdr-stage-name">No OTDR data available</div></div>';
         } else {
-            otdrData.forEach(stage => {
+            otdrData.forEach((stage) => {
                 const stageName = stage.stage_name;
                 const displayName = stageLabels[stageName] || stageName;
-                
+
                 otdrHTML += `
                     <div class="otdr-item">
                         <div class="otdr-stage-name">${displayName}</div>
@@ -1154,18 +1317,19 @@ async function showOTDRModal() {
             });
         }
 
-        otdrHTML += '</div>';
+        otdrHTML += "</div>";
         content.innerHTML = otdrHTML;
-        modal.style.display = 'flex';
+        modal.style.display = "flex";
     } catch (error) {
-        console.error('Error loading OTDR data:', error);
-        content.innerHTML = '<div class="otdr-list"><div class="otdr-item"><div class="otdr-stage-name">Error loading OTDR data</div></div></div>';
-        modal.style.display = 'flex';
+        console.error("Error loading OTDR data:", error);
+        content.innerHTML =
+            '<div class="otdr-list"><div class="otdr-item"><div class="otdr-stage-name">Error loading OTDR data</div></div></div>';
+        modal.style.display = "flex";
     }
 }
 
 function closeOTDRModal() {
-    document.getElementById('otdrModal').style.display = 'none';
+    document.getElementById("otdrModal").style.display = "none";
 }
 
 // Check for upcoming deadlines and send email reminders - runs daily 1-3 PM Indian time
@@ -1174,13 +1338,16 @@ function checkUpcomingDeadlines() {
     const currentHour = now.getHours();
 
     // Check if it's March 31st and reset OTDR data
-    if (now.getMonth() === 2 && now.getDate() === 31) { // March is month 2 (0-indexed)
+    if (now.getMonth() === 2 && now.getDate() === 31) {
+        // March is month 2 (0-indexed)
         resetOTDRAnnually();
     }
 
     // Only send emails between 1 PM and 3 PM Indian time to avoid spam
-    if (currentHour < 13 || currentHour >= 15 ) {
-        console.log('Email check skipped - outside business hours (1-3 PM Indian time)');
+    if (currentHour < 13 || currentHour >= 15) {
+        console.log(
+            "Email check skipped - outside business hours (1-3 PM Indian time)",
+        );
         return;
     }
 
@@ -1188,22 +1355,32 @@ function checkUpcomingDeadlines() {
     const fiveDaysFromNow = new Date();
     fiveDaysFromNow.setDate(today.getDate() + 5);
 
-    console.log(`Checking deadlines at ${now.toLocaleString()} for due date: ${fiveDaysFromNow.toDateString()}`);
+    console.log(
+        `Checking deadlines at ${now.toLocaleString()} for due date: ${fiveDaysFromNow.toDateString()}`,
+    );
 
-    projects.forEach(project => {
+    projects.forEach((project) => {
         if (!project.stages) return;
 
         const inUseStages = getInUseStages(project);
-        inUseStages.forEach(stageName => {
+        inUseStages.forEach((stageName) => {
             const stage = project.stages[stageName];
-            if (stage && stage.dueDate && !stage.completed && stage.person && stage.person.trim() !== '') {
+            if (
+                stage &&
+                stage.dueDate &&
+                !stage.completed &&
+                stage.person &&
+                stage.person.trim() !== ""
+            ) {
                 const dueDate = new Date(stage.dueDate);
                 const timeDiff = dueDate.getTime() - today.getTime();
                 const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
                 // Send email if exactly 5 days before due date
                 if (daysDiff === 5) {
-                    console.log(`Sending reminder for project: ${project.name}, stage: ${stageName}, due: ${stage.dueDate}`);
+                    console.log(
+                        `Sending reminder for project: ${project.name}, stage: ${stageName}, due: ${stage.dueDate}`,
+                    );
                     sendEmailReminder(project, stageName, stage);
                 }
             }
@@ -1213,14 +1390,16 @@ function checkUpcomingDeadlines() {
 
 async function sendEmailReminder(project, stageName, stage) {
     try {
-        const emailResponse = await fetch('email-database.json');
+        const emailResponse = await fetch("email-database.json");
         const emails = await emailResponse.json();
 
         const recipientEmail = emails[stageName];
 
         // Skip sending email for dispatch stage as there's no email configured
-        if (stageName === 'dispatch') {
-            console.log(`Skipping email for dispatch stage - no email configured`);
+        if (stageName === "dispatch") {
+            console.log(
+                `Skipping email for dispatch stage - no email configured`,
+            );
             return;
         }
 
@@ -1230,12 +1409,12 @@ async function sendEmailReminder(project, stageName, stage) {
                 subject: `Project Deadline Reminder - ${project.name}`,
                 text: `Dear Team,
 
-This is a reminder that the ${stageName.replace(/-/g, ' ')} stage for project "${project.name}" is due in 5 days.
+This is a reminder that the ${stageName.replace(/-/g, " ")} stage for project "${project.name}" is due in 5 days.
 
 Project Details:
 - Project Name: ${project.name}
 - Description: ${project.description}
-- Stage: ${stageName.replace(/-/g, ' ').toUpperCase()}
+- Stage: ${stageName.replace(/-/g, " ").toUpperCase()}
 - Due Date: ${stage.dueDate}
 - Person in Charge: ${stage.person}
 
@@ -1246,47 +1425,58 @@ Projects Team`,
                 html: `
                 <h3>Project Deadline Reminder</h3>
                 <p>Dear Team,</p>
-                <p>This is a reminder that the <strong>${stageName.replace(/-/g, ' ')}</strong> stage for project "<strong>${project.name}</strong>" is due in 5 days.</p>
+                <p>This is a reminder that the <strong>${stageName.replace(/-/g, " ")}</strong> stage for project "<strong>${project.name}</strong>" is due in 5 days.</p>
 
                 <h4>Project Details:</h4>
                 <ul>
                     <li><strong>Project Name:</strong> ${project.name}</li>
                     <li><strong>Description:</strong> ${project.description}</li>
-                    <li><strong>Stage:</strong> ${stageName.replace(/-/g, ' ').toUpperCase()}</li>
+                    <li><strong>Stage:</strong> ${stageName.replace(/-/g, " ").toUpperCase()}</li>
                     <li><strong>Due Date:</strong> ${stage.dueDate}</li>
                     <li><strong>Person in Charge:</strong> ${stage.person}</li>
                 </ul>
 
                 <p>Please ensure timely completion.</p>
                 <p>Best regards,<br>Projects Team</p>
-                `
+                `,
             };
 
-            const response = await fetch('/send-email', {
-                method: 'POST',
+            const response = await fetch("/send-email", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify(emailData)
+                body: JSON.stringify(emailData),
             });
 
             const result = await response.json();
             if (result.success) {
-                console.log(`Email reminder sent successfully to ${recipientEmail}`);
+                console.log(
+                    `Email reminder sent successfully to ${recipientEmail}`,
+                );
             } else {
-                console.error('Failed to send email:', result.error);
+                console.error("Failed to send email:", result.error);
             }
         }
     } catch (error) {
-        console.error('Error sending email reminder:', error);
+        console.error("Error sending email reminder:", error);
     }
 }
 
 // Reset OTDR data annually on March 31st
 async function resetOTDRAnnually() {
-    const stageNames = ['mechanical-design', 'electrical-design', 'manufacturing', 'wiring', 'assembly', 'controls', 'dispatch', 'installation'];
+    const stageNames = [
+        "mechanical-design",
+        "electrical-design",
+        "manufacturing",
+        "wiring",
+        "assembly",
+        "controls",
+        "dispatch",
+        "installation",
+    ];
 
-    console.log('Resetting OTDR data for new fiscal year...');
+    console.log("Resetting OTDR data for new fiscal year...");
 
     for (const stageName of stageNames) {
         try {
@@ -1295,18 +1485,18 @@ async function resetOTDRAnnually() {
                 projects: [],
                 totalProjects: 0,
                 onTimeProjects: 0,
-                otdr: 0
+                otdr: 0,
             };
 
-            const response = await fetch('/reset-otdr', {
-                method: 'POST',
+            const response = await fetch("/reset-otdr", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     stageName: stageName,
-                    data: resetData
-                })
+                    data: resetData,
+                }),
             });
 
             if (response.ok) {
