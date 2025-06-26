@@ -57,7 +57,7 @@ async function loadAuthData() {
                 });
                 
                 authData = employeeData;
-                console.log('Employee authentication data loaded from Supabase');
+                console.log('Employee authentication data loaded from Supabase:', Object.keys(authData).length, 'employees');
                 return employeeData;
             }
         }
@@ -70,7 +70,7 @@ async function loadAuthData() {
         
         const employeeData = await response.json();
         authData = employeeData;
-        console.log('Employee authentication data loaded from JSON fallback');
+        console.log('Employee authentication data loaded from JSON fallback:', Object.keys(authData).length, 'employees');
         return employeeData;
     } catch (error) {
         console.error('Error loading employee data:', error);
@@ -89,6 +89,9 @@ async function loadAuthData() {
  */
 function validateEmployee(employeeId) {
     const normalizedId = employeeId.toUpperCase().trim();
+    console.log('Validating normalized ID:', normalizedId);
+    console.log('Auth data has key:', normalizedId, '?', authData.hasOwnProperty(normalizedId));
+    
     if (authData[normalizedId]) {
         return {
             id: normalizedId,
@@ -107,27 +110,44 @@ function handleEmployeeLogin(event) {
     const employeeIdInput = document.getElementById('employeeId');
     const employeeId = employeeIdInput.value.trim();
     
+    console.log('Login attempt with ID:', employeeId);
+    console.log('Available auth data:', Object.keys(authData));
+    
     if (!employeeId) {
         showLoginError('Please enter your Employee ID.');
+        return;
+    }
+
+    // Check if auth data is loaded
+    if (Object.keys(authData).length === 0) {
+        showLoginError('System is loading. Please try again in a moment.');
+        // Try to reload auth data
+        loadAuthData();
         return;
     }
 
     const employee = validateEmployee(employeeId);
 
     if (employee) {
+        console.log('Valid employee found:', employee);
         currentUser = employee;
         showMainApp();
         hideLoginError();
         // Clear the input
         employeeIdInput.value = '';
         // Update user info display
-        document.getElementById('userInfo').textContent = `Welcome, ${employee.name}`;
+        const userInfoElement = document.getElementById('userInfo');
+        if (userInfoElement) {
+            userInfoElement.textContent = `Welcome, ${employee.name}`;
+        }
         // Initialize app after successful authentication
         listenForProjects();
         checkUpcomingDeadlines();
     } else {
+        console.log('Invalid employee ID entered');
         showLoginError('Invalid Employee ID. Please check and try again.');
         employeeIdInput.focus();
+        employeeIdInput.select();
     }
 }
 
@@ -422,6 +442,11 @@ function getOverdueProjects() {
 
 function renderProjects() {
     const grid = document.getElementById('projectGrid');
+    if (!grid) {
+        console.error('Project grid element not found');
+        return;
+    }
+    
     const filteredProjects = getFilteredProjects();
 
     // Sort projects by creation date (newest first)
@@ -434,7 +459,9 @@ function renderProjects() {
     grid.innerHTML = '';
     sortedProjects.forEach((project) => {
         const projectCard = createProjectCard(project);
-        grid.appendChild(projectCard);
+        if (projectCard) {
+            grid.appendChild(projectCard);
+        }
     });
 }
 
@@ -840,13 +867,34 @@ function toggleSidebar() {
 
 // Form submission handler and modal logic
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('DOM loaded, initializing application...');
+    
+    // Check if all required elements exist
+    const requiredElements = ['loginScreen', 'mainApp', 'employeeLoginForm', 'employeeId', 'loginError'];
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+    
+    if (missingElements.length > 0) {
+        console.error('Missing required DOM elements:', missingElements);
+        return;
+    }
+
     // Load authentication data and show login screen
     loadAuthData().then(() => {
+        console.log('Auth data loaded, showing login screen');
         showLoginScreen();
+    }).catch(error => {
+        console.error('Failed to load auth data:', error);
+        showLoginError('Failed to load authentication data. Please refresh the page.');
     });
 
     // Employee login form submission
-    document.getElementById('employeeLoginForm').addEventListener('submit', handleEmployeeLogin);
+    const loginForm = document.getElementById('employeeLoginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleEmployeeLogin);
+        console.log('Login form event listener attached');
+    } else {
+        console.error('Employee login form not found');
+    }
 
     document.getElementById('projectForm').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -1061,6 +1109,11 @@ async function showOTDRModal() {
     const modal = document.getElementById('otdrModal');
     const content = document.getElementById('otdrContent');
 
+    if (!modal || !content) {
+        console.error('OTDR modal elements not found');
+        return;
+    }
+
     try {
         // Fetch OTDR stats from Supabase
         const response = await fetch('/api/otdr-stats');
@@ -1079,7 +1132,7 @@ async function showOTDRModal() {
             'assembly': 'Assembly',
             'controls': 'Controls',
             'dispatch': 'Ready for Dispatch',
-            'installation': 'Installation & Commissioning'
+            'installation': 'Installation and Commissioning'
         };
 
         let otdrHTML = '<div class="otdr-list">';
